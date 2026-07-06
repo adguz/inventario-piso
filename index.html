@@ -349,7 +349,7 @@
 <footer class="actions" id="footerReview" style="display:none;">
   <button class="btn ghost" id="backToFillBtn">← Volver</button>
   <button class="btn secondary" id="downloadBtn">Descargar</button>
-  <button class="btn primary" id="sendBtn">Enviar por email</button>
+  <button class="btn primary" id="sendBtn">Enviar por WhatsApp</button>
 </footer>
 
 <div id="lightbox" class="lightbox">
@@ -958,28 +958,43 @@ function downloadFile(file){
 }
 
 document.getElementById('sendBtn').addEventListener('click', async ()=>{
-  const emails = tenants.map(t=>t.email).filter(Boolean);
-  const ownerEmail = document.getElementById('ownerEmail').value.trim();
-  const extraRaw = document.getElementById('extraEmails').value;
-  const extraEmails = extraRaw.split(/[,;\s]+/).map(e=>e.trim()).filter(Boolean);
-  const ccEmails = [...new Set([ownerEmail, ...extraEmails].filter(Boolean))];
-
-  const { pdfFile, pdfName, zipFile } = await buildOutputFiles();
+  const { pdfFile, zipFile } = await buildOutputFiles();
 
   const address = document.getElementById('propAddress').value || 'el piso';
   const reasonForSubject = document.getElementById('propReason').value;
-  const subject = 'Inventario fotográfico (' + reasonForSubject + ') — ' + address;
   const dateForBody = document.getElementById('propDate').value || '(sin fecha)';
-  const body = 'Hola,\nAdjunto el informe (PDF) y una carpeta (ZIP) con todas las fotos del inventario del piso en ' + address + '. Fecha: ' + dateForBody + '. Razón: ' + reasonForSubject + '.\nUn saludo.';
+  const text = 'Inventario fotográfico del piso en ' + address + '. Fecha: ' + dateForBody + '. Razón: ' + reasonForSubject + '.';
 
+  const filesFull = zipFile ? [pdfFile, zipFile] : [pdfFile];
+  const hasShareApi = !!navigator.share;
+
+  // Nivel 1: compartir PDF + ZIP juntos (elige WhatsApp en el selector de apps)
+  if(hasShareApi && (!navigator.canShare || navigator.canShare({ files: filesFull }))){
+    try{
+      await navigator.share({ files: filesFull, text });
+      toast('Elige el chat de WhatsApp donde enviarlo; los archivos ya van adjuntos');
+      return;
+    }catch(e){
+      if(e && e.name === 'AbortError'){ toast('Envío cancelado'); return; }
+    }
+  }
+
+  // Nivel 2: si falla con los dos, intentar compartir solo el PDF
+  if(zipFile && hasShareApi && (!navigator.canShare || navigator.canShare({ files:[pdfFile] }))){
+    try{
+      await navigator.share({ files:[pdfFile], text: text + ' (el ZIP de fotos se descarga aparte; compártelo también)' });
+      await new Promise(r=>setTimeout(()=>{ downloadFile(zipFile); r(); }, 400));
+      toast('PDF compartido. El ZIP se ha descargado; compártelo también por WhatsApp.');
+      return;
+    }catch(e){
+      if(e && e.name === 'AbortError'){ toast('Envío cancelado'); return; }
+    }
+  }
+
+  // Nivel 3: compartir archivos no soportado, descargamos para adjuntar a mano en WhatsApp
   downloadFile(pdfFile);
   if(zipFile) await new Promise(r=>setTimeout(()=>{ downloadFile(zipFile); r(); }, 400));
-
-  const allEmails = [...new Set([...emails, ...ccEmails])];
-  const mailto = `mailto:${encodeURIComponent(allEmails.join(','))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + '\n\n(Adjunta manualmente el PDF y el ZIP descargados)')}`;
-  window.location.href = mailto;
-
-  toast(zipFile ? 'PDF y ZIP descargados. Adjúntalos en el email que se ha abierto.' : 'PDF descargado. Adjúntalo en el email que se ha abierto.');
+  toast('Tu navegador no permite compartir directamente. Archivos descargados: adjúntalos a mano en WhatsApp.');
 });
 </script>
 </body>
