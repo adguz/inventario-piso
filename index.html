@@ -947,7 +947,10 @@ document.getElementById('downloadBtn').addEventListener('click', async ()=>{
 });
 
 function downloadFile(file){
-  const url = URL.createObjectURL(file);
+  // Usamos un tipo MIME genérico para el blob de descarga: así el navegador
+  // no intenta abrir el PDF en su propio visor y lo descarga directamente.
+  const forceBlob = new Blob([file], { type:'application/octet-stream' });
+  const url = URL.createObjectURL(forceBlob);
   const a = document.createElement('a');
   a.href = url; a.download = file.name;
   document.body.appendChild(a); a.click(); a.remove();
