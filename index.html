@@ -975,8 +975,8 @@ document.getElementById('sendBtn').addEventListener('click', async ()=>{
   downloadFile(pdfFile);
   if(zipFile) await new Promise(r=>setTimeout(()=>{ downloadFile(zipFile); r(); }, 400));
 
-  let mailto = `mailto:${encodeURIComponent(emails.join(','))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + '\n\n(Adjunta manualmente el PDF y el ZIP descargados)')}`;
-  if(ccEmails.length) mailto += `&cc=${encodeURIComponent(ccEmails.join(','))}`;
+  const allEmails = [...new Set([...emails, ...ccEmails])];
+  const mailto = `mailto:${encodeURIComponent(allEmails.join(','))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + '\n\n(Adjunta manualmente el PDF y el ZIP descargados)')}`;
   window.location.href = mailto;
 
   toast(zipFile ? 'PDF y ZIP descargados. Adjúntalos en el email que se ha abierto.' : 'PDF descargado. Adjúntalo en el email que se ha abierto.');
