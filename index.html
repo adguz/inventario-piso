@@ -679,6 +679,7 @@ function goToReview(){
   document.getElementById('footerReview').style.display = 'flex';
   document.getElementById('stepIndicator').innerHTML = '<b>Paso 2 de 2</b> · Revisar y firmar';
   renderReview();
+  prebuildZip();
   window.scrollTo(0,0);
 }
 function goToFill(){
@@ -902,16 +903,27 @@ function pdfFilename(){
 
 
 
+let cachedZipFile = null;
+
+async function prebuildZip(){
+  const totalPhotos = rooms.reduce((n,r)=>n+r.photos.length,0);
+  if(totalPhotos === 0){ cachedZipFile = null; return; }
+  try{
+    const zipBlob = await buildPhotosZip();
+    cachedZipFile = new File([zipBlob], zipFilename(), { type:'application/zip' });
+  }catch(e){ cachedZipFile = null; }
+}
+
 async function buildOutputFiles(){
-  toast('Generando PDF y ZIP de fotos…');
+  toast('Generando PDF…');
   const doc = await buildPdf();
   const pdfName = pdfFilename();
   const pdfBlob = doc.output('blob');
   const pdfFile = new File([pdfBlob], pdfName, { type:'application/pdf' });
 
   const totalPhotos = rooms.reduce((n,r)=>n+r.photos.length,0);
-  let zipFile = null;
-  if(totalPhotos > 0){
+  let zipFile = cachedZipFile;
+  if(!zipFile && totalPhotos > 0){
     const zipBlob = await buildPhotosZip();
     zipFile = new File([zipBlob], zipFilename(), { type:'application/zip' });
   }
@@ -933,6 +945,14 @@ document.getElementById('downloadBtn').addEventListener('click', async ()=>{
   }
 });
 
+function downloadFile(file){
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a');
+  a.href = url; a.download = file.name;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
 document.getElementById('sendBtn').addEventListener('click', async ()=>{
   const emails = tenants.map(t=>t.email).filter(Boolean);
   const ownerEmail = document.getElementById('ownerEmail').value.trim();
@@ -942,7 +962,6 @@ document.getElementById('sendBtn').addEventListener('click', async ()=>{
   const allEmails = [...new Set([...emails, ...ccEmails])];
 
   const { doc, pdfName, pdfFile, zipFile } = await buildOutputFiles();
-  const filesToShare = zipFile ? [pdfFile, zipFile] : [pdfFile];
 
   const address = document.getElementById('propAddress').value || 'el piso';
   const reasonForSubject = document.getElementById('propReason').value;
@@ -955,26 +974,35 @@ document.getElementById('sendBtn').addEventListener('click', async ()=>{
     try{ await navigator.clipboard.writeText(allEmails.join(', ')); }catch(e){ /* ignore */ }
   }
 
-  if(navigator.canShare && navigator.canShare({ files: filesToShare })){
+  // Nivel 1: intentar compartir PDF + ZIP juntos
+  const filesFull = zipFile ? [pdfFile, zipFile] : [pdfFile];
+  if(navigator.canShare && navigator.canShare({ files: filesFull })){
     try{
-      await navigator.share({ files: filesToShare, title:subject, text:body });
-      toast(allEmails.length
-        ? 'Destinatarios copiados: pégalos en "Para" y pulsa enviar'
-        : 'Elige tu app de email; el PDF y las fotos ya van adjuntos');
+      await navigator.share({ files: filesFull, title:subject, text:body });
+      toast(allEmails.length ? 'Destinatarios copiados: pégalos en "Para" y pulsa enviar' : 'Elige tu app de email; el PDF y las fotos ya van adjuntos');
       return;
-    }catch(e){ /* el usuario canceló o no soportado: seguimos con la alternativa */ }
+    }catch(e){
+      if(e && e.name === 'AbortError'){ toast('Envío cancelado'); return; }
+      // si falla por otro motivo, seguimos probando
+    }
   }
 
-  // Alternativa si el navegador no soporta compartir archivos:
-  // abrimos el email con destinatarios/asunto/cuerpo, y descargamos los adjuntos aparte
-  doc.save(pdfName);
-  if(zipFile){
-    const url = URL.createObjectURL(zipFile);
-    const a = document.createElement('a');
-    a.href = url; a.download = zipFile.name;
-    document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(url);
+  // Nivel 2: si falló por el ZIP, intentar compartir solo el PDF (más compatible),
+  // y descargar el ZIP aparte para que lo adjuntes tú mismo
+  if(zipFile && navigator.canShare && navigator.canShare({ files:[pdfFile] })){
+    try{
+      await navigator.share({ files:[pdfFile], title:subject, text: body + '\n\n(El ZIP de fotos originales se ha descargado aparte; adjúntalo también antes de enviar)' });
+      downloadFile(zipFile);
+      toast('PDF adjunto en el email. El ZIP de fotos se ha descargado; adjúntalo también.');
+      return;
+    }catch(e){
+      if(e && e.name === 'AbortError'){ toast('Envío cancelado'); return; }
+    }
   }
+
+  // Nivel 3: el navegador no soporta compartir archivos en absoluto
+  doc.save(pdfName);
+  if(zipFile) downloadFile(zipFile);
   let mailto = `mailto:${encodeURIComponent(emails.join(','))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + '\n\n(Adjunta manualmente el PDF y el ZIP descargados)')}`;
   if(ccEmails.length) mailto += `&cc=${encodeURIComponent(ccEmails.join(','))}`;
   window.location.href = mailto;
