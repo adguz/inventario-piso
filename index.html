@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Inventario de Piso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root{
+    --paper:#EEF0EA;
+    --paper-card:#FFFFFF;
+    --ink:#20291F;
+    --ink-soft:#5B6459;
+    --line:#D6D9CE;
+    --flag:#D9531E;
+    --flag-dark:#B84315;
+    --stamp:#3B5A45;
+    --stamp-bg:#E4EDE6;
+    --danger:#B23A2E;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-tap-highlight-color:transparent;
+    padding-bottom:96px;
+  }
+  header.topbar{
+    position:sticky; top:0; z-index:20;
+    background:var(--paper);
+    border-bottom:1px solid var(--line);
+    padding:16px 18px 14px;
+  }
+  .brand-row{display:flex; align-items:baseline; gap:8px;}
+  .brand-tag{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px; letter-spacing:.08em;
+    color:var(--flag); font-weight:600;
+    border:1px solid var(--flag); border-radius:4px;
+    padding:2px 6px;
+  }
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:22px; font-weight:700; margin:6px 0 2px;
+    letter-spacing:-0.01em;
+  }
+  .subtitle{font-size:13px; color:var(--ink-soft);}
+  .step-indicator{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft);
+    letter-spacing:.05em; margin-top:8px;
+  }
+  .step-indicator b{color:var(--flag);}
+  main{padding:18px; max-width:640px; margin:0 auto;}
+  section.card{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px;
+    margin-bottom:18px;
+  }
+  .card-head{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .card-title{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:15px; font-weight:600;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--ink-soft); display:block; margin-bottom:4px;
+  }
+  label.field{display:block; margin-bottom:12px;}
+  label.field span{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px; color:var(--ink-soft); letter-spacing:.03em;
+    display:block; margin-bottom:5px;
+  }
+  input[type=text], input[type=email], input[type=tel], input[type=date], select, textarea{
+    width:100%; border:1px solid var(--line); border-radius:7px;
+    padding:10px 11px; font-size:14.5px; font-family:'Inter',sans-serif;
+    background:#FAFBF8; color:var(--ink);
+  }
+  input:focus, textarea:focus, select:focus{outline:2px solid var(--stamp); outline-offset:1px; border-color:var(--stamp);}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+
+  .room{
+    border:1px solid var(--line); border-radius:var(--radius);
+    margin-bottom:14px; overflow:hidden; background:var(--paper-card);
+  }
+  .room-head{
+    display:flex; align-items:center; gap:10px;
+    padding:12px 14px; background:#F6F7F2; border-bottom:1px solid var(--line);
+  }
+  .room-tab{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600;
+    background:var(--ink); color:#fff; border-radius:5px;
+    padding:3px 7px; letter-spacing:.03em; flex-shrink:0;
+  }
+  .room-name{flex:1; font-weight:600; font-size:14.5px;}
+  .room-name input{border:none; background:transparent; font-weight:600; font-size:14.5px; padding:2px; width:100%;}
+  .stamp{
+    font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600;
+    color:var(--stamp); background:var(--stamp-bg);
+    border:1px solid var(--stamp); border-radius:50px;
+    padding:3px 9px; letter-spacing:.04em; flex-shrink:0;
+  }
+  .stamp.pending{color:var(--ink-soft); background:#F1F1EC; border-color:var(--line);}
+  .room-body{padding:12px 14px;}
+  .photo-grid{
+    display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:10px;
+  }
+  .photo-tile{
+    border-radius:7px; overflow:hidden;
+    border:1px solid var(--line); background:#F1F1EC;
+  }
+  .photo-tile .thumb-wrap{position:relative; aspect-ratio:4/3;}
+  .photo-tile img{width:100%; height:100%; object-fit:cover; display:block;}
+  .photo-tile button.del{
+    position:absolute; top:3px; right:3px; width:20px; height:20px;
+    border-radius:50%; border:none; background:rgba(20,25,18,.72); color:#fff;
+    font-size:12px; line-height:1; cursor:pointer;
+  }
+  .photo-tile .cap-input{
+    width:100%; border:none; border-top:1px solid var(--line);
+    background:#fff; font-size:11.5px; padding:6px 7px;
+    font-family:'IBM Plex Mono',monospace; color:var(--ink);
+  }
+  .photo-tile .cap-input:focus{outline:none; background:#F6F7F2;}
+  .photo-tile .cap-readonly{
+    width:100%; border:none; border-top:1px solid var(--line);
+    background:#fff; font-size:11.5px; padding:6px 7px;
+    font-family:'IBM Plex Mono',monospace; color:var(--ink-soft); min-height:26px;
+  }
+  .add-photo-btn, .add-room-btn, .add-tenant-btn{
+    display:inline-flex; align-items:center; gap:6px;
+    border:1.5px dashed var(--ink-soft); background:transparent;
+    color:var(--ink); font-weight:600; font-size:13px;
+    border-radius:7px; padding:9px 12px; cursor:pointer; width:100%;
+    justify-content:center; font-family:'Inter',sans-serif;
+  }
+  .add-photo-btn:active, .add-room-btn:active, .add-tenant-btn:active{background:#F1F1EC;}
+  .remove-room, .remove-tenant{
+    background:none; border:none; color:var(--ink-soft); font-size:16px;
+    cursor:pointer; padding:2px 4px; flex-shrink:0;
+  }
+
+  .tenant{
+    border:1px solid var(--line); border-radius:var(--radius);
+    margin-bottom:14px; overflow:hidden; background:var(--paper-card);
+  }
+  .tenant-head{
+    display:flex; align-items:center; gap:10px;
+    padding:12px 14px; background:#F6F7F2; border-bottom:1px solid var(--line);
+  }
+  .tenant-body{padding:14px;}
+
+  .sig-pad-wrap{border:1px solid var(--line); border-radius:7px; background:#FAFBF8; overflow:hidden;}
+  canvas.sigPad{width:100%; height:130px; display:block; touch-action:none;}
+  .sig-actions{display:flex; justify-content:space-between; align-items:center; margin-top:8px;}
+  .link-btn{
+    background:none; border:none; color:var(--flag); font-weight:600;
+    font-size:12.5px; cursor:pointer; font-family:'IBM Plex Mono',monospace;
+    letter-spacing:.02em; padding:4px 0;
+  }
+
+  .review-room{margin-bottom:16px;}
+  .review-room-title{
+    font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:14px;
+    margin-bottom:8px; display:flex; align-items:center; gap:8px;
+  }
+  .review-empty{
+    font-size:12.5px; color:var(--ink-soft); font-style:italic; padding:8px 0;
+  }
+
+  footer.actions{
+    position:fixed; bottom:0; left:0; right:0; z-index:30;
+    background:var(--paper-card); border-top:1px solid var(--line);
+    padding:12px 18px calc(12px + env(safe-area-inset-bottom));
+    display:flex; gap:10px; max-width:640px; margin:0 auto;
+  }
+  .btn{
+    flex:1; border:none; border-radius:8px; padding:13px 10px;
+    font-weight:600; font-size:13.5px; cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .btn.primary{background:var(--flag); color:#fff;}
+  .btn.primary:active{background:var(--flag-dark);}
+  .btn.secondary{background:#F1F1EC; color:var(--ink); border:1px solid var(--line);}
+  .btn.ghost{background:none; color:var(--ink-soft); flex:0 0 auto; padding:13px 14px;}
+  .btn:disabled{opacity:.45; cursor:not-allowed;}
+
+  .toast{
+    position:fixed; bottom:100px; left:50%; transform:translateX(-50%);
+    background:var(--ink); color:#fff; padding:10px 16px; border-radius:8px;
+    font-size:13px; z-index:50; max-width:80%; text-align:center;
+    box-shadow:0 4px 14px rgba(0,0,0,.2);
+  }
+  .hint{font-size:11.5px; color:var(--ink-soft); margin-top:6px; line-height:1.4;}
+  input[type=file]{display:none;}
+  #stepReview{display:none;}
+
+  .photo-tile .thumb-wrap{cursor:zoom-in;}
+
+  .lightbox{
+    display:none; position:fixed; inset:0; z-index:100;
+    background:rgba(15,18,13,.94);
+    align-items:center; justify-content:center; flex-direction:column;
+  }
+  .lightbox.open{display:flex;}
+  .lightbox img{
+    max-width:92vw; max-height:78vh; object-fit:contain;
+    border-radius:6px;
+  }
+  .lightbox-close{
+    position:absolute; top:calc(14px + env(safe-area-inset-top)); right:14px;
+    width:36px; height:36px; border-radius:50%; border:none;
+    background:rgba(255,255,255,.12); color:#fff; font-size:18px; cursor:pointer;
+  }
+  .lightbox-nav{
+    position:absolute; top:50%; transform:translateY(-50%);
+    width:44px; height:44px; border-radius:50%; border:none;
+    background:rgba(255,255,255,.12); color:#fff; font-size:26px; cursor:pointer;
+    line-height:1;
+  }
+  .lightbox-prev{left:10px;}
+  .lightbox-next{right:10px;}
+  .lightbox-room{
+    color:rgba(255,255,255,.55); font-family:'IBM Plex Mono',monospace; font-size:11px;
+    letter-spacing:.08em; text-transform:uppercase; margin-top:16px;
+  }
+  .lightbox-cap{
+    color:#fff; font-family:'Inter',sans-serif; font-size:14.5px; font-weight:500;
+    margin-top:5px; max-width:85vw; text-align:center; line-height:1.4;
+  }
+  .lightbox-cap.empty{ color:rgba(255,255,255,.4); font-style:italic; font-weight:400; }
+  .lightbox-counter{
+    color:rgba(255,255,255,.5); font-family:'IBM Plex Mono',monospace;
+    font-size:11px; margin-top:6px; letter-spacing:.05em;
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <h1>Inventario del piso</h1>
+  <div class="subtitle">Fotos por estancia + firmas de inquilinos + PDF resumen</div>
+  <div class="step-indicator" id="stepIndicator"><b>Paso 1 de 2</b> Â· Rellenar datos y fotos</div>
+</header>
+
+<main>
+
+  <div id="stepFill">
+
+    <section class="card">
+      <div class="card-head"><span class="card-title">01 Â· Datos del inmueble</span></div>
+      <label class="field"><span>DirecciÃ³n</span>
+        <input type="text" id="propAddress" placeholder="Calle, nÃºmero, ciudad">
+      </label>
+      <div class="row2">
+        <label class="field"><span>Fecha</span>
+          <input type="date" id="propDate">
+        </label>
+        <label class="field"><span>Referencia (opcional)</span>
+          <input type="text" id="propRef" placeholder="Ref. catastral / nÂº contrato">
+        </label>
+      </div>
+      <label class="field"><span>Motivo</span>
+        <select id="propReason">
+          <option value="Inicio de alquiler">Inicio de alquiler</option>
+          <option value="Fin de alquiler">Fin de alquiler</option>
+          <option value="ComprobaciÃ³n periÃ³dica">ComprobaciÃ³n periÃ³dica</option>
+          <option value="Arreglos">Arreglos</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </label>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><span class="card-title">02 Â· Propietario</span></div>
+      <div class="row2">
+        <label class="field"><span>Nombre completo</span>
+          <input type="text" id="ownerName" placeholder="Nombre y apellidos">
+        </label>
+        <label class="field"><span>DNI / NIE</span>
+          <input type="text" id="ownerDoc" placeholder="00000000A">
+        </label>
+      </div>
+      <div class="row2">
+        <label class="field"><span>Email</span>
+          <input type="email" id="ownerEmail" placeholder="propietario@correo.com">
+        </label>
+        <label class="field"><span>TelÃ©fono</span>
+          <input type="tel" id="ownerPhone" placeholder="+34 600 000 000">
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><span class="card-title">03 Â· Inquilinos</span></div>
+      <div id="tenantsList"></div>
+      <button class="add-tenant-btn" id="addTenantBtn">+ AÃ±adir inquilino</button>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><span class="card-title">04 Â· Otros emails</span></div>
+      <label class="field">
+        <input type="text" id="extraEmails" placeholder="gestor@correo.com, abogado@correo.com">
+      </label>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><span class="card-title">05 Â· Estancias y fotos</span></div>
+      <div id="roomsList"></div>
+      <button class="add-room-btn" id="addRoomBtn">+ AÃ±adir estancia</button>
+    </section>
+
+  </div>
+
+  <div id="stepReview">
+
+    <section class="card">
+      <div class="card-head"><span class="card-title">RevisiÃ³n de fotos y comentarios</span></div>
+      <div class="hint" style="margin-bottom:12px;">Comprueba que todo estÃ¡ correcto antes de firmar. Si falta algo, vuelve atrÃ¡s y edÃ­talo.</div>
+      <div id="reviewRooms"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><span class="card-title">Firma de los inquilinos</span></div>
+      <div class="hint" style="margin-bottom:12px;">Cada inquilino firma para confirmar que el inventario refleja el estado real del piso.</div>
+      <div id="reviewSignatures"></div>
+    </section>
+
+  </div>
+
+</main>
+
+<footer class="actions" id="footerFill">
+  <button class="btn primary" id="goReviewBtn">Revisar fotos y firmar â†’</button>
+</footer>
+
+<footer class="actions" id="footerReview" style="display:none;">
+  <button class="btn ghost" id="backToFillBtn">â† Volver</button>
+  <button class="btn secondary" id="downloadBtn">Descargar</button>
+  <button class="btn primary" id="sendBtn">Enviar por email</button>
+</footer>
+
+<div id="lightbox" class="lightbox">
+  <button id="lightboxClose" class="lightbox-close">âœ•</button>
+  <button id="lightboxPrev" class="lightbox-nav lightbox-prev">â€¹</button>
+  <button id="lightboxNext" class="lightbox-nav lightbox-next">â€º</button>
+  <img id="lightboxImg">
+  <div id="lightboxRoom" class="lightbox-room"></div>
+  <div id="lightboxCap" class="lightbox-cap"></div>
+  <div id="lightboxCounter" class="lightbox-counter"></div>
+</div>
+
+<script>
+// ---------- state (in-memory only) ----------
+let rooms = [];
+let roomCounter = 0;
+let tenants = [];
+let tenantCounter = 0;
+
+// ================= ROOMS =================
+function addRoom(name){
+  roomCounter++;
+  rooms.push({ id: roomCounter, name: name || ('Estancia ' + roomCounter), photos: [] });
+  renderRooms();
+}
+
+function renderRooms(){
+  const list = document.getElementById('roomsList');
+  list.innerHTML = '';
+  rooms.forEach(room => {
+    const el = document.createElement('div');
+    el.className = 'room';
+    const hasPhotos = room.photos.length > 0;
+    el.innerHTML = `
+      <div class="room-head">
+        <span class="room-tab">${String(room.id).padStart(2,'0')}</span>
+        <span class="room-name"><input type="text" value="${escapeHtml(room.name)}" data-room="${room.id}" class="room-name-input"></span>
+        <span class="stamp ${hasPhotos ? '' : 'pending'}">${hasPhotos ? room.photos.length + ' FOTO' + (room.photos.length>1?'S':'') : 'SIN FOTOS'}</span>
+        <button class="remove-room" data-remove="${room.id}" title="Eliminar estancia">âœ•</button>
+      </div>
+      <div class="room-body">
+        <div class="photo-grid" id="grid-${room.id}"></div>
+        <button class="add-photo-btn" data-addphoto="${room.id}">ðŸ“· AÃ±adir fotos</button>
+        <input type="file" accept="image/*" capture="environment" multiple id="file-${room.id}">
+      </div>
+    `;
+    list.appendChild(el);
+    const grid = el.querySelector(`#grid-${room.id}`);
+    room.photos.forEach((p, idx) => {
+      const tile = document.createElement('div');
+      tile.className = 'photo-tile';
+      tile.innerHTML = `
+        <div class="thumb-wrap">
+          <img src="${p.dataUrl}">
+          <button class="del" data-delphoto="${room.id}:${idx}">âœ•</button>
+        </div>
+        <input type="text" class="cap-input" placeholder="Comentario (ej. mancha en pared)" value="${escapeHtml(p.caption||'')}" data-capinput="${room.id}:${idx}">
+      `;
+      grid.appendChild(tile);
+    });
+  });
+
+  list.querySelectorAll('.room-name-input').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const r = rooms.find(x=>x.id==e.target.dataset.room);
+      if(r) r.name = e.target.value;
+    });
+  });
+  list.querySelectorAll('[data-remove]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      rooms = rooms.filter(x=>x.id != e.target.dataset.remove);
+      renderRooms();
+    });
+  });
+  list.querySelectorAll('[data-addphoto]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      document.getElementById('file-'+e.target.dataset.addphoto).click();
+    });
+  });
+  list.querySelectorAll('input[type=file]').forEach(inp=>{
+    inp.addEventListener('change', async e=>{
+      const roomId = e.target.id.replace('file-','');
+      const room = rooms.find(x=>x.id == roomId);
+      for(const file of e.target.files){
+        const img = await fileToDataUrl(file);
+        room.photos.push({ dataUrl: img.dataUrl, width: img.width, height: img.height, caption:'', originalBlob: file, originalName: file.name });
+      }
+      renderRooms();
+    });
+  });
+  list.querySelectorAll('[data-delphoto]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const [roomId, idx] = e.target.dataset.delphoto.split(':');
+      const room = rooms.find(x=>x.id == roomId);
+      room.photos.splice(idx,1);
+      renderRooms();
+    });
+  });
+  list.querySelectorAll('[data-capinput]').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const [roomId, idx] = e.target.dataset.capinput.split(':');
+      const room = rooms.find(x=>x.id == roomId);
+      if(room && room.photos[idx]) room.photos[idx].caption = e.target.value;
+    });
+  });
+}
+
+// ================= TENANTS =================
+function addTenant(){
+  tenantCounter++;
+  tenants.push({
+    id: tenantCounter, name:'', docId:'', email:'', phone:'',
+    canvasEl:null, ctx:null, sigEmpty:true
+  });
+  renderTenants();
+}
+
+function renderTenants(){
+  const list = document.getElementById('tenantsList');
+  list.innerHTML = '';
+  tenants.forEach(t=>{
+    const el = document.createElement('div');
+    el.className = 'tenant';
+    el.innerHTML = `
+      <div class="tenant-head">
+        <span class="room-tab">${String(t.id).padStart(2,'0')}</span>
+        <span class="room-name" style="flex:1; font-weight:600; font-size:14.5px;">Inquilino ${t.id}</span>
+        <button class="remove-tenant" data-removetenant="${t.id}" title="Eliminar inquilino">âœ•</button>
+      </div>
+      <div class="tenant-body">
+        <div class="row2">
+          <label class="field"><span>Nombre completo</span>
+            <input type="text" class="ten-name" data-tenant="${t.id}" value="${escapeHtml(t.name)}" placeholder="Nombre y apellidos">
+          </label>
+          <label class="field"><span>DNI / NIE</span>
+            <input type="text" class="ten-doc" data-tenant="${t.id}" value="${escapeHtml(t.docId)}" placeholder="00000000A">
+          </label>
+        </div>
+        <div class="row2">
+          <label class="field"><span>Email</span>
+            <input type="email" class="ten-email" data-tenant="${t.id}" value="${escapeHtml(t.email)}" placeholder="inquilino@correo.com">
+          </label>
+          <label class="field"><span>TelÃ©fono</span>
+            <input type="tel" class="ten-phone" data-tenant="${t.id}" value="${escapeHtml(t.phone)}" placeholder="+34 600 000 000">
+          </label>
+        </div>
+      </div>
+    `;
+    list.appendChild(el);
+  });
+
+  list.querySelectorAll('.ten-name').forEach(i=>i.addEventListener('input', e=>{
+    tenants.find(t=>t.id==e.target.dataset.tenant).name = e.target.value;
+  }));
+  list.querySelectorAll('.ten-doc').forEach(i=>i.addEventListener('input', e=>{
+    tenants.find(t=>t.id==e.target.dataset.tenant).docId = e.target.value;
+  }));
+  list.querySelectorAll('.ten-email').forEach(i=>i.addEventListener('input', e=>{
+    tenants.find(t=>t.id==e.target.dataset.tenant).email = e.target.value;
+  }));
+  list.querySelectorAll('.ten-phone').forEach(i=>i.addEventListener('input', e=>{
+    tenants.find(t=>t.id==e.target.dataset.tenant).phone = e.target.value;
+  }));
+  list.querySelectorAll('[data-removetenant]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      tenants = tenants.filter(t=>t.id != e.target.dataset.removetenant);
+      renderTenants();
+    });
+  });
+}
+
+// ================= REVIEW STEP =================
+let reviewPhotoList = []; // flattened list for lightbox navigation
+let lightboxIndex = 0;
+
+function renderReview(){
+  // photos + comments, read-only
+  const reviewRooms = document.getElementById('reviewRooms');
+  reviewRooms.innerHTML = '';
+  reviewPhotoList = [];
+  const roomsWithPhotos = rooms.filter(r=>r.photos.length>0);
+  if(roomsWithPhotos.length === 0){
+    reviewRooms.innerHTML = '<div class="review-empty">TodavÃ­a no se han aÃ±adido fotos.</div>';
+  }
+  roomsWithPhotos.forEach(room=>{
+    const block = document.createElement('div');
+    block.className = 'review-room';
+    block.innerHTML = `
+      <div class="review-room-title">
+        <span class="room-tab">${String(room.id).padStart(2,'0')}</span>
+        ${escapeHtml(room.name)}
+      </div>
+      <div class="photo-grid"></div>
+    `;
+    const grid = block.querySelector('.photo-grid');
+    room.photos.forEach(p=>{
+      const flatIndex = reviewPhotoList.length;
+      reviewPhotoList.push({ dataUrl:p.dataUrl, caption:p.caption, roomName:room.name });
+      const tile = document.createElement('div');
+      tile.className = 'photo-tile';
+      tile.innerHTML = `
+        <div class="thumb-wrap" data-lightbox="${flatIndex}"><img src="${p.dataUrl}"></div>
+        <div class="cap-readonly">${p.caption ? escapeHtml(p.caption) : '<span style="opacity:.5">Sin comentario</span>'}</div>
+      `;
+      grid.appendChild(tile);
+    });
+    reviewRooms.appendChild(block);
+  });
+  reviewRooms.querySelectorAll('[data-lightbox]').forEach(el=>{
+    el.addEventListener('click', ()=> openLightbox(parseInt(el.dataset.lightbox,10)));
+  });
+
+  // signature pads, one per tenant
+  const reviewSig = document.getElementById('reviewSignatures');
+  reviewSig.innerHTML = '';
+  if(tenants.length === 0){
+    reviewSig.innerHTML = '<div class="review-empty">No se ha aÃ±adido ningÃºn inquilino.</div>';
+  }
+  tenants.forEach(t=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'tenant';
+    wrap.innerHTML = `
+      <div class="tenant-head">
+        <span class="room-tab">${String(t.id).padStart(2,'0')}</span>
+        <span class="room-name" style="flex:1; font-weight:600; font-size:14.5px;">${escapeHtml(t.name || ('Inquilino ' + t.id))}</span>
+      </div>
+      <div class="tenant-body">
+        <div class="sig-pad-wrap"><canvas class="sigPad" data-canvasfor="${t.id}"></canvas></div>
+        <div class="sig-actions">
+          <span class="hint">Firma para confirmar el estado reflejado en el inventario.</span>
+          <button class="link-btn" data-clearsig="${t.id}">BORRAR</button>
+        </div>
+      </div>
+    `;
+    reviewSig.appendChild(wrap);
+  });
+  reviewSig.querySelectorAll('[data-clearsig]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const t = tenants.find(x=>x.id == e.target.dataset.clearsig);
+      if(t && t.ctx){ t.ctx.clearRect(0,0,t.canvasEl.width,t.canvasEl.height); t.sigEmpty = true; }
+    });
+  });
+  reviewSig.querySelectorAll('canvas.sigPad').forEach(c=>{
+    const t = tenants.find(x=>x.id == c.dataset.canvasfor);
+    setupSignaturePad(c, t);
+  });
+}
+
+function setupSignaturePad(canvas, tenant){
+  const ctx = canvas.getContext('2d');
+  tenant.canvasEl = canvas; tenant.ctx = ctx; tenant.sigEmpty = true;
+  canvas.style.touchAction = 'none';
+
+  function resize(){
+    const rect = canvas.getBoundingClientRect();
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = rect.width * ratio;
+    canvas.height = rect.height * ratio;
+    ctx.scale(ratio, ratio);
+    ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.strokeStyle = '#20291F';
+  }
+  resize();
+
+  let drawing = false;
+  function getPos(e){
+    const rect = canvas.getBoundingClientRect();
+    const t2 = e.touches ? e.touches[0] : e;
+    return { x: t2.clientX - rect.left, y: t2.clientY - rect.top };
+  }
+  function start(e){ drawing = true; tenant.sigEmpty = false; const p=getPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); e.preventDefault(); }
+  function move(e){ if(!drawing) return; const p=getPos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); e.preventDefault(); }
+  function end(){ drawing = false; }
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  canvas.addEventListener('mouseup', end);
+  canvas.addEventListener('touchstart', start, { passive:false });
+  canvas.addEventListener('touchmove', move, { passive:false });
+  canvas.addEventListener('touchend', end, { passive:false });
+}
+
+// ================= LIGHTBOX =================
+function openLightbox(idx){
+  lightboxIndex = idx;
+  renderLightbox();
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox(){
+  document.getElementById('lightbox').classList.remove('open');
+}
+function renderLightbox(){
+  const photo = reviewPhotoList[lightboxIndex];
+  if(!photo) return;
+  document.getElementById('lightboxImg').src = photo.dataUrl;
+  document.getElementById('lightboxRoom').textContent = photo.roomName;
+  const capEl = document.getElementById('lightboxCap');
+  if(photo.caption){
+    capEl.textContent = photo.caption;
+    capEl.classList.remove('empty');
+  } else {
+    capEl.textContent = 'Sin comentario';
+    capEl.classList.add('empty');
+  }
+  document.getElementById('lightboxCounter').textContent = (lightboxIndex+1) + ' / ' + reviewPhotoList.length;
+  document.getElementById('lightboxPrev').style.visibility = reviewPhotoList.length > 1 ? 'visible' : 'hidden';
+  document.getElementById('lightboxNext').style.visibility = reviewPhotoList.length > 1 ? 'visible' : 'hidden';
+}
+function lightboxPrev(){
+  lightboxIndex = (lightboxIndex - 1 + reviewPhotoList.length) % reviewPhotoList.length;
+  renderLightbox();
+}
+function lightboxNext(){
+  lightboxIndex = (lightboxIndex + 1) % reviewPhotoList.length;
+  renderLightbox();
+}
+document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+document.getElementById('lightboxPrev').addEventListener('click', lightboxPrev);
+document.getElementById('lightboxNext').addEventListener('click', lightboxNext);
+document.getElementById('lightbox').addEventListener('click', e=>{
+  if(e.target.id === 'lightbox') closeLightbox();
+});
+
+// ================= STEP NAVIGATION =================
+function goToReview(){
+  document.getElementById('stepFill').style.display = 'none';
+  document.getElementById('stepReview').style.display = 'block';
+  document.getElementById('footerFill').style.display = 'none';
+  document.getElementById('footerReview').style.display = 'flex';
+  document.getElementById('stepIndicator').innerHTML = '<b>Paso 2 de 2</b> Â· Revisar y firmar';
+  renderReview();
+  window.scrollTo(0,0);
+}
+function goToFill(){
+  document.getElementById('stepFill').style.display = 'block';
+  document.getElementById('stepReview').style.display = 'none';
+  document.getElementById('footerFill').style.display = 'flex';
+  document.getElementById('footerReview').style.display = 'none';
+  document.getElementById('stepIndicator').innerHTML = '<b>Paso 1 de 2</b> Â· Rellenar datos y fotos';
+  window.scrollTo(0,0);
+}
+
+// ================= helpers =================
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+async function fileToDataUrl(file){
+  try{
+    const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0);
+    return { dataUrl: canvas.toDataURL('image/jpeg', 0.85), width: bitmap.width, height: bitmap.height };
+  }catch(e){
+    // fallback for browsers without createImageBitmap orientation support
+    const dataUrl = await new Promise((res,rej)=>{
+      const r = new FileReader();
+      r.onload = ()=>res(r.result);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+    return { dataUrl, width:null, height:null };
+  }
+}
+
+document.getElementById('addRoomBtn').addEventListener('click', ()=> addRoom());
+document.getElementById('addTenantBtn').addEventListener('click', ()=> addTenant());
+document.getElementById('goReviewBtn').addEventListener('click', goToReview);
+document.getElementById('backToFillBtn').addEventListener('click', goToFill);
+
+// seed
+['SalÃ³n','Cocina','BaÃ±o','Dormitorio 1'].forEach(n=>addRoom(n));
+addTenant();
+
+// ---------- toast ----------
+function toast(msg, ms=2600){
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), ms);
+}
+
+// ---------- PDF generation ----------
+async function buildPdf(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  const pageW = 210, margin = 16;
+  let y = margin;
+
+  const address = document.getElementById('propAddress').value || '(sin direcciÃ³n)';
+  const date = document.getElementById('propDate').value || '(sin fecha)';
+  const ref = document.getElementById('propRef').value;
+  const reason = document.getElementById('propReason').value;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(18);
+  doc.text('Inventario fotogrÃ¡fico', margin, y); y += 9;
+  doc.setDrawColor(217,83,30); doc.setLineWidth(0.8);
+  doc.line(margin, y, pageW-margin, y); y += 8;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text('Inmueble', margin, y); y += 5.5;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.text('DirecciÃ³n: ' + address, margin, y); y += 5;
+  doc.text('Fecha: ' + date + (ref ? '   Â·   Ref: ' + ref : ''), margin, y); y += 5;
+  doc.text('Motivo: ' + reason, margin, y); y += 8;
+
+  // rooms summary
+  doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text('Resumen de estancias', margin, y); y += 5.5;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  rooms.forEach(r=>{
+    doc.text('Â· ' + r.name + ' â€” ' + r.photos.length + ' foto(s)', margin, y);
+    y += 5;
+  });
+  y += 4;
+
+  // owner
+  const ownerName = document.getElementById('ownerName').value;
+  const ownerDoc = document.getElementById('ownerDoc').value;
+  const ownerEmailPdf = document.getElementById('ownerEmail').value;
+  const ownerPhone = document.getElementById('ownerPhone').value;
+  if(ownerName || ownerDoc || ownerEmailPdf || ownerPhone){
+    if(y > 260){ doc.addPage(); y = margin; }
+    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text('Propietario: ' + (ownerName || '(sin nombre)'), margin, y); y += 5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    doc.text((ownerDoc ? 'DNI/NIE: ' + ownerDoc : '') + (ownerEmailPdf ? '   Â·   Email: ' + ownerEmailPdf : '') + (ownerPhone ? '   Â·   Tel: ' + ownerPhone : ''), margin, y);
+    y += 8;
+  }
+
+  // extra cc emails (used below for the unified recipients line)
+  const extraEmailsPdf = document.getElementById('extraEmails').value.split(/[,;\s]+/).map(e=>e.trim()).filter(Boolean);
+
+  // tenants + signatures
+  for(const t of tenants){
+    if(y > 250){ doc.addPage(); y = margin; }
+    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text('Inquilino: ' + (t.name || '(sin nombre)'), margin, y); y += 5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    doc.text((t.docId ? 'DNI/NIE: ' + t.docId : '') + (t.email ? '   Â·   Email: ' + t.email : '') + (t.phone ? '   Â·   Tel: ' + t.phone : ''), margin, y);
+    y += 6;
+    if(t.canvasEl && !t.sigEmpty){
+      const sigData = t.canvasEl.toDataURL('image/png');
+      doc.addImage(sigData, 'PNG', margin, y, 55, 20);
+      y += 24;
+    } else {
+      doc.setFont('helvetica','italic'); doc.setFontSize(9);
+      doc.text('(Pendiente de firma)', margin, y); y += 8;
+      doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    }
+  }
+
+  // otros emails (copia)
+  if(extraEmailsPdf.length){
+    if(y > 260){ doc.addPage(); y = margin; }
+    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text('Otros emails', margin, y); y += 5.5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    const wrappedEmails = doc.splitTextToSize(extraEmailsPdf.join('   Â·   '), pageW - margin*2);
+    doc.text(wrappedEmails, margin, y);
+    y += wrappedEmails.length * 5 + 3;
+  }
+
+  // room pages with photos + captions
+  for(const room of rooms){
+    if(room.photos.length === 0) continue;
+    doc.addPage();
+    let ry = margin;
+    doc.setFont('helvetica','bold'); doc.setFontSize(14);
+    doc.text(room.name, margin, ry); ry += 8;
+
+    const cols = 2, gap = 6;
+    const cellW = (pageW - margin*2 - gap*(cols-1)) / cols;
+    const cellH = cellW * 0.75; // altura mÃ¡xima de la celda
+    const capH = 5;
+    let col = 0;
+
+    for(const photo of room.photos){
+      if(ry + cellH + capH > 285){ doc.addPage(); ry = margin; col = 0; }
+      const x = margin + col * (cellW + gap);
+
+      // encajar la foto dentro de la celda respetando su proporciÃ³n real
+      let drawW = cellW, drawH = cellH;
+      if(photo.width && photo.height){
+        const ratio = photo.width / photo.height;
+        if(ratio >= cellW / cellH){
+          drawW = cellW; drawH = cellW / ratio;
+        } else {
+          drawH = cellH; drawW = cellH * ratio;
+        }
+      }
+      const offsetX = x + (cellW - drawW) / 2;
+      const offsetY = ry + (cellH - drawH) / 2;
+      try{
+        doc.addImage(photo.dataUrl, 'JPEG', offsetX, offsetY, drawW, drawH);
+      }catch(e){
+        doc.addImage(photo.dataUrl, 'PNG', offsetX, offsetY, drawW, drawH);
+      }
+      if(photo.caption){
+        doc.setFont('helvetica','italic'); doc.setFontSize(8.5);
+        const wrapped = doc.splitTextToSize(photo.caption, cellW);
+        doc.text(wrapped, x, ry + cellH + 3.5);
+      }
+      col++;
+      if(col >= cols){ col = 0; ry += cellH + capH + (photo.caption ? 4 : 0) + gap; }
+    }
+  }
+
+  return doc;
+}
+
+function sanitizeFolderName(name){
+  return (name || 'estancia').trim().replace(/[\\/:*?"<>|]+/g,'_') || 'estancia';
+}
+
+async function buildPhotosZip(){
+  const zip = new JSZip();
+  rooms.forEach(room=>{
+    if(room.photos.length === 0) return;
+    const folderName = String(room.id).padStart(2,'0') + '_' + sanitizeFolderName(room.name);
+    const folder = zip.folder(folderName);
+    room.photos.forEach((p, idx)=>{
+      const ext = (p.originalName && p.originalName.includes('.')) ? p.originalName.split('.').pop() : 'jpg';
+      const base = String(idx+1).padStart(2,'0') + (p.caption ? '_' + sanitizeFolderName(p.caption).slice(0,40) : '');
+      folder.file(base + '.' + ext, p.originalBlob || dataUrlToBlob(p.dataUrl));
+    });
+  });
+  return zip.generateAsync({ type:'blob' });
+}
+
+function dataUrlToBlob(dataUrl){
+  const [meta, b64] = dataUrl.split(',');
+  const mime = meta.match(/:(.*?);/)[1];
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type:mime });
+}
+
+function zipFilename(){
+  const addr = (document.getElementById('propAddress').value || 'piso').replace(/[^a-z0-9]+/gi,'_');
+  const date = document.getElementById('propDate').value || 'fecha';
+  return `fotos_${addr}_${date}.zip`;
+}
+
+
+function pdfFilename(){
+  const addr = (document.getElementById('propAddress').value || 'piso').replace(/[^a-z0-9]+/gi,'_');
+  const date = document.getElementById('propDate').value || 'fecha';
+  return `inventario_${addr}_${date}.pdf`;
+}
+
+
+
+async function buildOutputFiles(){
+  toast('Generando PDF y ZIP de fotosâ€¦');
+  const doc = await buildPdf();
+  const pdfName = pdfFilename();
+  const pdfBlob = doc.output('blob');
+  const pdfFile = new File([pdfBlob], pdfName, { type:'application/pdf' });
+
+  const totalPhotos = rooms.reduce((n,r)=>n+r.photos.length,0);
+  let zipFile = null;
+  if(totalPhotos > 0){
+    const zipBlob = await buildPhotosZip();
+    zipFile = new File([zipBlob], zipFilename(), { type:'application/zip' });
+  }
+  return { doc, pdfName, pdfFile, zipFile };
+}
+
+document.getElementById('downloadBtn').addEventListener('click', async ()=>{
+  const { doc, pdfName, zipFile } = await buildOutputFiles();
+  doc.save(pdfName);
+  if(zipFile){
+    const url = URL.createObjectURL(zipFile);
+    const a = document.createElement('a');
+    a.href = url; a.download = zipFile.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    toast('PDF y fotos descargados en tu carpeta de Descargas.');
+  } else {
+    toast('PDF descargado en tu carpeta de Descargas.');
+  }
+});
+
+document.getElementById('sendBtn').addEventListener('click', async ()=>{
+  const emails = tenants.map(t=>t.email).filter(Boolean);
+  const ownerEmail = document.getElementById('ownerEmail').value.trim();
+  const extraRaw = document.getElementById('extraEmails').value;
+  const extraEmails = extraRaw.split(/[,;\s]+/).map(e=>e.trim()).filter(Boolean);
+  const ccEmails = [...new Set([ownerEmail, ...extraEmails].filter(Boolean))];
+  const allEmails = [...new Set([...emails, ...ccEmails])];
+
+  const { doc, pdfName, pdfFile, zipFile } = await buildOutputFiles();
+  const filesToShare = zipFile ? [pdfFile, zipFile] : [pdfFile];
+
+  const address = document.getElementById('propAddress').value || 'el piso';
+  const reasonForSubject = document.getElementById('propReason').value;
+  const subject = 'Inventario fotogrÃ¡fico (' + reasonForSubject + ') â€” ' + address;
+  const body = 'Hola,\n\nAdjunto el informe (PDF) y una carpeta con todas las fotos originales (' + reasonForSubject + ') del piso en ' + address + '.\n\nUn saludo.';
+
+  // Copiamos los destinatarios al portapapeles, ya que el navegador no puede
+  // rellenar el campo "Para" cuando ademÃ¡s se adjuntan archivos.
+  if(allEmails.length && navigator.clipboard){
+    try{ await navigator.clipboard.writeText(allEmails.join(', ')); }catch(e){ /* ignore */ }
+  }
+
+  if(navigator.canShare && navigator.canShare({ files: filesToShare })){
+    try{
+      await navigator.share({ files: filesToShare, title:subject, text:body });
+      toast(allEmails.length
+        ? 'Destinatarios copiados: pÃ©galos en "Para" y pulsa enviar'
+        : 'Elige tu app de email; el PDF y las fotos ya van adjuntos');
+      return;
+    }catch(e){ /* el usuario cancelÃ³ o no soportado: seguimos con la alternativa */ }
+  }
+
+  // Alternativa si el navegador no soporta compartir archivos:
+  // abrimos el email con destinatarios/asunto/cuerpo, y descargamos los adjuntos aparte
+  doc.save(pdfName);
+  if(zipFile){
+    const url = URL.createObjectURL(zipFile);
+    const a = document.createElement('a');
+    a.href = url; a.download = zipFile.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }
+  let mailto = `mailto:${encodeURIComponent(emails.join(','))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + '\n\n(Adjunta manualmente el PDF y el ZIP descargados)')}`;
+  if(ccEmails.length) mailto += `&cc=${encodeURIComponent(ccEmails.join(','))}`;
+  window.location.href = mailto;
+  toast('Tu navegador no permite adjuntar directamente. PDF y ZIP descargados; adjÃºntalos manualmente.');
+});
+</script>
+</body>
+</html>
