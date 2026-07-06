@@ -252,7 +252,7 @@
 <header class="topbar">
   <h1>Inventario del piso</h1>
   <div class="subtitle">Fotos por estancia + firmas de inquilinos + PDF resumen</div>
-  <div class="step-indicator" id="stepIndicator"><b>Paso 1 de 2</b> Â· Rellenar datos y fotos</div>
+  <div class="step-indicator" id="stepIndicator"><b>Paso 1 de 2</b> · Rellenar datos y fotos</div>
 </header>
 
 <main>
@@ -260,23 +260,23 @@
   <div id="stepFill">
 
     <section class="card">
-      <div class="card-head"><span class="card-title">01 Â· Datos del inmueble</span></div>
-      <label class="field"><span>DirecciÃ³n</span>
-        <input type="text" id="propAddress" placeholder="Calle, nÃºmero, ciudad">
+      <div class="card-head"><span class="card-title">01 · Datos del inmueble</span></div>
+      <label class="field"><span>Dirección</span>
+        <input type="text" id="propAddress" placeholder="Calle, número, ciudad">
       </label>
       <div class="row2">
         <label class="field"><span>Fecha</span>
           <input type="date" id="propDate">
         </label>
         <label class="field"><span>Referencia (opcional)</span>
-          <input type="text" id="propRef" placeholder="Ref. catastral / nÂº contrato">
+          <input type="text" id="propRef" placeholder="Ref. catastral / nº contrato">
         </label>
       </div>
       <label class="field"><span>Motivo</span>
         <select id="propReason">
           <option value="Inicio de alquiler">Inicio de alquiler</option>
           <option value="Fin de alquiler">Fin de alquiler</option>
-          <option value="ComprobaciÃ³n periÃ³dica">ComprobaciÃ³n periÃ³dica</option>
+          <option value="Comprobación periódica">Comprobación periódica</option>
           <option value="Arreglos">Arreglos</option>
           <option value="Otro">Otro</option>
         </select>
@@ -284,7 +284,7 @@
     </section>
 
     <section class="card">
-      <div class="card-head"><span class="card-title">02 Â· Propietario</span></div>
+      <div class="card-head"><span class="card-title">02 · Propietario</span></div>
       <div class="row2">
         <label class="field"><span>Nombre completo</span>
           <input type="text" id="ownerName" placeholder="Nombre y apellidos">
@@ -297,29 +297,29 @@
         <label class="field"><span>Email</span>
           <input type="email" id="ownerEmail" placeholder="propietario@correo.com">
         </label>
-        <label class="field"><span>TelÃ©fono</span>
+        <label class="field"><span>Teléfono</span>
           <input type="tel" id="ownerPhone" placeholder="+34 600 000 000">
         </label>
       </div>
     </section>
 
     <section class="card">
-      <div class="card-head"><span class="card-title">03 Â· Inquilinos</span></div>
+      <div class="card-head"><span class="card-title">03 · Inquilinos</span></div>
       <div id="tenantsList"></div>
-      <button class="add-tenant-btn" id="addTenantBtn">+ AÃ±adir inquilino</button>
+      <button class="add-tenant-btn" id="addTenantBtn">+ Añadir inquilino</button>
     </section>
 
     <section class="card">
-      <div class="card-head"><span class="card-title">04 Â· Otros emails</span></div>
+      <div class="card-head"><span class="card-title">04 · Otros emails</span></div>
       <label class="field">
         <input type="text" id="extraEmails" placeholder="gestor@correo.com, abogado@correo.com">
       </label>
     </section>
 
     <section class="card">
-      <div class="card-head"><span class="card-title">05 Â· Estancias y fotos</span></div>
+      <div class="card-head"><span class="card-title">05 · Estancias y fotos</span></div>
       <div id="roomsList"></div>
-      <button class="add-room-btn" id="addRoomBtn">+ AÃ±adir estancia</button>
+      <button class="add-room-btn" id="addRoomBtn">+ Añadir estancia</button>
     </section>
 
   </div>
@@ -327,8 +327,8 @@
   <div id="stepReview">
 
     <section class="card">
-      <div class="card-head"><span class="card-title">RevisiÃ³n de fotos y comentarios</span></div>
-      <div class="hint" style="margin-bottom:12px;">Comprueba que todo estÃ¡ correcto antes de firmar. Si falta algo, vuelve atrÃ¡s y edÃ­talo.</div>
+      <div class="card-head"><span class="card-title">Revisión de fotos y comentarios</span></div>
+      <div class="hint" style="margin-bottom:12px;">Comprueba que todo está correcto antes de firmar. Si falta algo, vuelve atrás y edítalo.</div>
       <div id="reviewRooms"></div>
     </section>
 
@@ -343,19 +343,19 @@
 </main>
 
 <footer class="actions" id="footerFill">
-  <button class="btn primary" id="goReviewBtn">Revisar fotos y firmar â†’</button>
+  <button class="btn primary" id="goReviewBtn">Revisar fotos y firmar →</button>
 </footer>
 
 <footer class="actions" id="footerReview" style="display:none;">
-  <button class="btn ghost" id="backToFillBtn">â† Volver</button>
+  <button class="btn ghost" id="backToFillBtn">← Volver</button>
   <button class="btn secondary" id="downloadBtn">Descargar</button>
   <button class="btn primary" id="sendBtn">Enviar por email</button>
 </footer>
 
 <div id="lightbox" class="lightbox">
-  <button id="lightboxClose" class="lightbox-close">âœ•</button>
-  <button id="lightboxPrev" class="lightbox-nav lightbox-prev">â€¹</button>
-  <button id="lightboxNext" class="lightbox-nav lightbox-next">â€º</button>
+  <button id="lightboxClose" class="lightbox-close">✕</button>
+  <button id="lightboxPrev" class="lightbox-nav lightbox-prev">‹</button>
+  <button id="lightboxNext" class="lightbox-nav lightbox-next">›</button>
   <img id="lightboxImg">
   <div id="lightboxRoom" class="lightbox-room"></div>
   <div id="lightboxCap" class="lightbox-cap"></div>
@@ -388,11 +388,11 @@ function renderRooms(){
         <span class="room-tab">${String(room.id).padStart(2,'0')}</span>
         <span class="room-name"><input type="text" value="${escapeHtml(room.name)}" data-room="${room.id}" class="room-name-input"></span>
         <span class="stamp ${hasPhotos ? '' : 'pending'}">${hasPhotos ? room.photos.length + ' FOTO' + (room.photos.length>1?'S':'') : 'SIN FOTOS'}</span>
-        <button class="remove-room" data-remove="${room.id}" title="Eliminar estancia">âœ•</button>
+        <button class="remove-room" data-remove="${room.id}" title="Eliminar estancia">✕</button>
       </div>
       <div class="room-body">
         <div class="photo-grid" id="grid-${room.id}"></div>
-        <button class="add-photo-btn" data-addphoto="${room.id}">ðŸ“· AÃ±adir fotos</button>
+        <button class="add-photo-btn" data-addphoto="${room.id}">📷 Añadir fotos</button>
         <input type="file" accept="image/*" capture="environment" multiple id="file-${room.id}">
       </div>
     `;
@@ -404,7 +404,7 @@ function renderRooms(){
       tile.innerHTML = `
         <div class="thumb-wrap">
           <img src="${p.dataUrl}">
-          <button class="del" data-delphoto="${room.id}:${idx}">âœ•</button>
+          <button class="del" data-delphoto="${room.id}:${idx}">✕</button>
         </div>
         <input type="text" class="cap-input" placeholder="Comentario (ej. mancha en pared)" value="${escapeHtml(p.caption||'')}" data-capinput="${room.id}:${idx}">
       `;
@@ -477,7 +477,7 @@ function renderTenants(){
       <div class="tenant-head">
         <span class="room-tab">${String(t.id).padStart(2,'0')}</span>
         <span class="room-name" style="flex:1; font-weight:600; font-size:14.5px;">Inquilino ${t.id}</span>
-        <button class="remove-tenant" data-removetenant="${t.id}" title="Eliminar inquilino">âœ•</button>
+        <button class="remove-tenant" data-removetenant="${t.id}" title="Eliminar inquilino">✕</button>
       </div>
       <div class="tenant-body">
         <div class="row2">
@@ -492,7 +492,7 @@ function renderTenants(){
           <label class="field"><span>Email</span>
             <input type="email" class="ten-email" data-tenant="${t.id}" value="${escapeHtml(t.email)}" placeholder="inquilino@correo.com">
           </label>
-          <label class="field"><span>TelÃ©fono</span>
+          <label class="field"><span>Teléfono</span>
             <input type="tel" class="ten-phone" data-tenant="${t.id}" value="${escapeHtml(t.phone)}" placeholder="+34 600 000 000">
           </label>
         </div>
@@ -532,7 +532,7 @@ function renderReview(){
   reviewPhotoList = [];
   const roomsWithPhotos = rooms.filter(r=>r.photos.length>0);
   if(roomsWithPhotos.length === 0){
-    reviewRooms.innerHTML = '<div class="review-empty">TodavÃ­a no se han aÃ±adido fotos.</div>';
+    reviewRooms.innerHTML = '<div class="review-empty">Todavía no se han añadido fotos.</div>';
   }
   roomsWithPhotos.forEach(room=>{
     const block = document.createElement('div');
@@ -566,7 +566,7 @@ function renderReview(){
   const reviewSig = document.getElementById('reviewSignatures');
   reviewSig.innerHTML = '';
   if(tenants.length === 0){
-    reviewSig.innerHTML = '<div class="review-empty">No se ha aÃ±adido ningÃºn inquilino.</div>';
+    reviewSig.innerHTML = '<div class="review-empty">No se ha añadido ningún inquilino.</div>';
   }
   tenants.forEach(t=>{
     const wrap = document.createElement('div');
@@ -677,7 +677,7 @@ function goToReview(){
   document.getElementById('stepReview').style.display = 'block';
   document.getElementById('footerFill').style.display = 'none';
   document.getElementById('footerReview').style.display = 'flex';
-  document.getElementById('stepIndicator').innerHTML = '<b>Paso 2 de 2</b> Â· Revisar y firmar';
+  document.getElementById('stepIndicator').innerHTML = '<b>Paso 2 de 2</b> · Revisar y firmar';
   renderReview();
   window.scrollTo(0,0);
 }
@@ -686,7 +686,7 @@ function goToFill(){
   document.getElementById('stepReview').style.display = 'none';
   document.getElementById('footerFill').style.display = 'flex';
   document.getElementById('footerReview').style.display = 'none';
-  document.getElementById('stepIndicator').innerHTML = '<b>Paso 1 de 2</b> Â· Rellenar datos y fotos';
+  document.getElementById('stepIndicator').innerHTML = '<b>Paso 1 de 2</b> · Rellenar datos y fotos';
   window.scrollTo(0,0);
 }
 
@@ -719,7 +719,7 @@ document.getElementById('goReviewBtn').addEventListener('click', goToReview);
 document.getElementById('backToFillBtn').addEventListener('click', goToFill);
 
 // seed
-['SalÃ³n','Cocina','BaÃ±o','Dormitorio 1'].forEach(n=>addRoom(n));
+['Salón','Cocina','Baño','Dormitorio 1'].forEach(n=>addRoom(n));
 addTenant();
 
 // ---------- toast ----------
@@ -737,21 +737,21 @@ async function buildPdf(){
   const pageW = 210, margin = 16;
   let y = margin;
 
-  const address = document.getElementById('propAddress').value || '(sin direcciÃ³n)';
+  const address = document.getElementById('propAddress').value || '(sin dirección)';
   const date = document.getElementById('propDate').value || '(sin fecha)';
   const ref = document.getElementById('propRef').value;
   const reason = document.getElementById('propReason').value;
 
   doc.setFont('helvetica','bold'); doc.setFontSize(18);
-  doc.text('Inventario fotogrÃ¡fico', margin, y); y += 9;
+  doc.text('Inventario fotográfico', margin, y); y += 9;
   doc.setDrawColor(217,83,30); doc.setLineWidth(0.8);
   doc.line(margin, y, pageW-margin, y); y += 8;
 
   doc.setFont('helvetica','bold'); doc.setFontSize(11);
   doc.text('Inmueble', margin, y); y += 5.5;
   doc.setFont('helvetica','normal'); doc.setFontSize(10);
-  doc.text('DirecciÃ³n: ' + address, margin, y); y += 5;
-  doc.text('Fecha: ' + date + (ref ? '   Â·   Ref: ' + ref : ''), margin, y); y += 5;
+  doc.text('Dirección: ' + address, margin, y); y += 5;
+  doc.text('Fecha: ' + date + (ref ? '   ·   Ref: ' + ref : ''), margin, y); y += 5;
   doc.text('Motivo: ' + reason, margin, y); y += 8;
 
   // rooms summary
@@ -759,7 +759,7 @@ async function buildPdf(){
   doc.text('Resumen de estancias', margin, y); y += 5.5;
   doc.setFont('helvetica','normal'); doc.setFontSize(10);
   rooms.forEach(r=>{
-    doc.text('Â· ' + r.name + ' â€” ' + r.photos.length + ' foto(s)', margin, y);
+    doc.text('· ' + r.name + ' — ' + r.photos.length + ' foto(s)', margin, y);
     y += 5;
   });
   y += 4;
@@ -774,7 +774,7 @@ async function buildPdf(){
     doc.setFont('helvetica','bold'); doc.setFontSize(11);
     doc.text('Propietario: ' + (ownerName || '(sin nombre)'), margin, y); y += 5;
     doc.setFont('helvetica','normal'); doc.setFontSize(10);
-    doc.text((ownerDoc ? 'DNI/NIE: ' + ownerDoc : '') + (ownerEmailPdf ? '   Â·   Email: ' + ownerEmailPdf : '') + (ownerPhone ? '   Â·   Tel: ' + ownerPhone : ''), margin, y);
+    doc.text((ownerDoc ? 'DNI/NIE: ' + ownerDoc : '') + (ownerEmailPdf ? '   ·   Email: ' + ownerEmailPdf : '') + (ownerPhone ? '   ·   Tel: ' + ownerPhone : ''), margin, y);
     y += 8;
   }
 
@@ -787,7 +787,7 @@ async function buildPdf(){
     doc.setFont('helvetica','bold'); doc.setFontSize(11);
     doc.text('Inquilino: ' + (t.name || '(sin nombre)'), margin, y); y += 5;
     doc.setFont('helvetica','normal'); doc.setFontSize(10);
-    doc.text((t.docId ? 'DNI/NIE: ' + t.docId : '') + (t.email ? '   Â·   Email: ' + t.email : '') + (t.phone ? '   Â·   Tel: ' + t.phone : ''), margin, y);
+    doc.text((t.docId ? 'DNI/NIE: ' + t.docId : '') + (t.email ? '   ·   Email: ' + t.email : '') + (t.phone ? '   ·   Tel: ' + t.phone : ''), margin, y);
     y += 6;
     if(t.canvasEl && !t.sigEmpty){
       const sigData = t.canvasEl.toDataURL('image/png');
@@ -806,7 +806,7 @@ async function buildPdf(){
     doc.setFont('helvetica','bold'); doc.setFontSize(11);
     doc.text('Otros emails', margin, y); y += 5.5;
     doc.setFont('helvetica','normal'); doc.setFontSize(10);
-    const wrappedEmails = doc.splitTextToSize(extraEmailsPdf.join('   Â·   '), pageW - margin*2);
+    const wrappedEmails = doc.splitTextToSize(extraEmailsPdf.join('   ·   '), pageW - margin*2);
     doc.text(wrappedEmails, margin, y);
     y += wrappedEmails.length * 5 + 3;
   }
@@ -821,7 +821,7 @@ async function buildPdf(){
 
     const cols = 2, gap = 6;
     const cellW = (pageW - margin*2 - gap*(cols-1)) / cols;
-    const cellH = cellW * 0.75; // altura mÃ¡xima de la celda
+    const cellH = cellW * 0.75; // altura máxima de la celda
     const capH = 5;
     let col = 0;
 
@@ -829,7 +829,7 @@ async function buildPdf(){
       if(ry + cellH + capH > 285){ doc.addPage(); ry = margin; col = 0; }
       const x = margin + col * (cellW + gap);
 
-      // encajar la foto dentro de la celda respetando su proporciÃ³n real
+      // encajar la foto dentro de la celda respetando su proporción real
       let drawW = cellW, drawH = cellH;
       if(photo.width && photo.height){
         const ratio = photo.width / photo.height;
@@ -903,7 +903,7 @@ function pdfFilename(){
 
 
 async function buildOutputFiles(){
-  toast('Generando PDF y ZIP de fotosâ€¦');
+  toast('Generando PDF y ZIP de fotos…');
   const doc = await buildPdf();
   const pdfName = pdfFilename();
   const pdfBlob = doc.output('blob');
@@ -946,11 +946,11 @@ document.getElementById('sendBtn').addEventListener('click', async ()=>{
 
   const address = document.getElementById('propAddress').value || 'el piso';
   const reasonForSubject = document.getElementById('propReason').value;
-  const subject = 'Inventario fotogrÃ¡fico (' + reasonForSubject + ') â€” ' + address;
+  const subject = 'Inventario fotográfico (' + reasonForSubject + ') — ' + address;
   const body = 'Hola,\n\nAdjunto el informe (PDF) y una carpeta con todas las fotos originales (' + reasonForSubject + ') del piso en ' + address + '.\n\nUn saludo.';
 
   // Copiamos los destinatarios al portapapeles, ya que el navegador no puede
-  // rellenar el campo "Para" cuando ademÃ¡s se adjuntan archivos.
+  // rellenar el campo "Para" cuando además se adjuntan archivos.
   if(allEmails.length && navigator.clipboard){
     try{ await navigator.clipboard.writeText(allEmails.join(', ')); }catch(e){ /* ignore */ }
   }
@@ -959,10 +959,10 @@ document.getElementById('sendBtn').addEventListener('click', async ()=>{
     try{
       await navigator.share({ files: filesToShare, title:subject, text:body });
       toast(allEmails.length
-        ? 'Destinatarios copiados: pÃ©galos en "Para" y pulsa enviar'
+        ? 'Destinatarios copiados: pégalos en "Para" y pulsa enviar'
         : 'Elige tu app de email; el PDF y las fotos ya van adjuntos');
       return;
-    }catch(e){ /* el usuario cancelÃ³ o no soportado: seguimos con la alternativa */ }
+    }catch(e){ /* el usuario canceló o no soportado: seguimos con la alternativa */ }
   }
 
   // Alternativa si el navegador no soporta compartir archivos:
@@ -978,7 +978,7 @@ document.getElementById('sendBtn').addEventListener('click', async ()=>{
   let mailto = `mailto:${encodeURIComponent(emails.join(','))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + '\n\n(Adjunta manualmente el PDF y el ZIP descargados)')}`;
   if(ccEmails.length) mailto += `&cc=${encodeURIComponent(ccEmails.join(','))}`;
   window.location.href = mailto;
-  toast('Tu navegador no permite adjuntar directamente. PDF y ZIP descargados; adjÃºntalos manualmente.');
+  toast('Tu navegador no permite adjuntar directamente. PDF y ZIP descargados; adjúntalos manualmente.');
 });
 </script>
 </body>
