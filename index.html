@@ -959,54 +959,23 @@ document.getElementById('sendBtn').addEventListener('click', async ()=>{
   const extraRaw = document.getElementById('extraEmails').value;
   const extraEmails = extraRaw.split(/[,;\s]+/).map(e=>e.trim()).filter(Boolean);
   const ccEmails = [...new Set([ownerEmail, ...extraEmails].filter(Boolean))];
-  const allEmails = [...new Set([...emails, ...ccEmails])];
 
-  const { doc, pdfName, pdfFile, zipFile } = await buildOutputFiles();
+  const { doc, pdfName, zipFile } = await buildOutputFiles();
 
   const address = document.getElementById('propAddress').value || 'el piso';
   const reasonForSubject = document.getElementById('propReason').value;
   const subject = 'Inventario fotográfico (' + reasonForSubject + ') — ' + address;
-  const body = 'Hola,\n\nAdjunto el informe (PDF) y una carpeta con todas las fotos originales (' + reasonForSubject + ') del piso en ' + address + '.\n\nUn saludo.';
+  const dateForBody = document.getElementById('propDate').value || '(sin fecha)';
+  const body = 'Hola,\nAdjunto el informe (PDF) y una carpeta (ZIP) con todas las fotos del inventario del piso en ' + address + '. Fecha: ' + dateForBody + '. Razón: ' + reasonForSubject + '.\nUn saludo.';
 
-  // Copiamos los destinatarios al portapapeles, ya que el navegador no puede
-  // rellenar el campo "Para" cuando además se adjuntan archivos.
-  if(allEmails.length && navigator.clipboard){
-    try{ await navigator.clipboard.writeText(allEmails.join(', ')); }catch(e){ /* ignore */ }
-  }
-
-  // Nivel 1: intentar compartir PDF + ZIP juntos
-  const filesFull = zipFile ? [pdfFile, zipFile] : [pdfFile];
-  if(navigator.canShare && navigator.canShare({ files: filesFull })){
-    try{
-      await navigator.share({ files: filesFull, title:subject, text:body });
-      toast(allEmails.length ? 'Destinatarios copiados: pégalos en "Para" y pulsa enviar' : 'Elige tu app de email; el PDF y las fotos ya van adjuntos');
-      return;
-    }catch(e){
-      if(e && e.name === 'AbortError'){ toast('Envío cancelado'); return; }
-      // si falla por otro motivo, seguimos probando
-    }
-  }
-
-  // Nivel 2: si falló por el ZIP, intentar compartir solo el PDF (más compatible),
-  // y descargar el ZIP aparte para que lo adjuntes tú mismo
-  if(zipFile && navigator.canShare && navigator.canShare({ files:[pdfFile] })){
-    try{
-      await navigator.share({ files:[pdfFile], title:subject, text: body + '\n\n(El ZIP de fotos originales se ha descargado aparte; adjúntalo también antes de enviar)' });
-      downloadFile(zipFile);
-      toast('PDF adjunto en el email. El ZIP de fotos se ha descargado; adjúntalo también.');
-      return;
-    }catch(e){
-      if(e && e.name === 'AbortError'){ toast('Envío cancelado'); return; }
-    }
-  }
-
-  // Nivel 3: el navegador no soporta compartir archivos en absoluto
   doc.save(pdfName);
   if(zipFile) downloadFile(zipFile);
+
   let mailto = `mailto:${encodeURIComponent(emails.join(','))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + '\n\n(Adjunta manualmente el PDF y el ZIP descargados)')}`;
   if(ccEmails.length) mailto += `&cc=${encodeURIComponent(ccEmails.join(','))}`;
   window.location.href = mailto;
-  toast('Tu navegador no permite adjuntar directamente. PDF y ZIP descargados; adjúntalos manualmente.');
+
+  toast(zipFile ? 'PDF y ZIP descargados. Adjúntalos en el email que se ha abierto.' : 'PDF descargado. Adjúntalo en el email que se ha abierto.');
 });
 </script>
 </body>
