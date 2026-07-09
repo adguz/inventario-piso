@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/lite.umd.js"></script>
 <style>
   :root{
     --paper:#EEF0EA;
@@ -37,14 +38,17 @@
     border-bottom:1px solid var(--line);
     padding:16px 18px 14px;
   }
-  .brand-row{display:flex; align-items:baseline; gap:8px;}
-  .brand-tag{
-    font-family:'IBM Plex Mono',monospace;
-    font-size:11px; letter-spacing:.08em;
-    color:var(--flag); font-weight:600;
-    border:1px solid var(--flag); border-radius:4px;
-    padding:2px 6px;
+  .header-top-row{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
+  .lang-switch{
+    display:flex; border:1px solid var(--line); border-radius:7px; overflow:hidden;
+    flex-shrink:0; margin-top:2px;
   }
+  .lang-switch button{
+    border:none; background:var(--paper-card); color:var(--ink-soft);
+    font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600;
+    padding:6px 10px; cursor:pointer; letter-spacing:.04em;
+  }
+  .lang-switch button.active{background:var(--ink); color:#fff;}
   h1{
     font-family:'Space Grotesk',sans-serif;
     font-size:22px; font-weight:700; margin:6px 0 2px;
@@ -71,11 +75,6 @@
   .card-title{
     font-family:'Space Grotesk',sans-serif;
     font-size:15px; font-weight:600;
-  }
-  .eyebrow{
-    font-family:'IBM Plex Mono',monospace;
-    font-size:10.5px; letter-spacing:.09em; text-transform:uppercase;
-    color:var(--ink-soft); display:block; margin-bottom:4px;
   }
   label.field{display:block; margin-bottom:12px;}
   label.field span{
@@ -121,7 +120,7 @@
     border-radius:7px; overflow:hidden;
     border:1px solid var(--line); background:#F1F1EC;
   }
-  .photo-tile .thumb-wrap{position:relative; aspect-ratio:4/3;}
+  .photo-tile .thumb-wrap{position:relative; aspect-ratio:4/3; cursor:zoom-in;}
   .photo-tile img{width:100%; height:100%; object-fit:cover; display:block;}
   .photo-tile button.del{
     position:absolute; top:3px; right:3px; width:20px; height:20px;
@@ -207,8 +206,6 @@
   input[type=file]{display:none;}
   #stepReview{display:none;}
 
-  .photo-tile .thumb-wrap{cursor:zoom-in;}
-
   .lightbox{
     display:none; position:fixed; inset:0; z-index:100;
     background:rgba(15,18,13,.94);
@@ -250,9 +247,17 @@
 <body>
 
 <header class="topbar">
-  <h1>Inventario del piso</h1>
-  <div class="subtitle">Fotos por estancia + firmas de inquilinos + PDF resumen</div>
-  <div class="step-indicator" id="stepIndicator"><b>Paso 1 de 2</b> · Rellenar datos y fotos</div>
+  <div class="header-top-row">
+    <div>
+      <h1 data-i18n="app_title">Inventario del piso</h1>
+      <div class="subtitle" data-i18n="app_subtitle">Fotos por estancia + firmas de inquilinos + PDF resumen</div>
+    </div>
+    <div class="lang-switch">
+      <button id="langEs" class="active" type="button">ES</button>
+      <button id="langEn" type="button">EN</button>
+    </div>
+  </div>
+  <div class="step-indicator" id="stepIndicator"><b data-i18n="step1_bold">Paso 1 de 2</b> <span data-i18n="step1_rest"> · Rellenar datos y fotos</span></div>
 </header>
 
 <main>
@@ -260,66 +265,52 @@
   <div id="stepFill">
 
     <section class="card">
-      <div class="card-head"><span class="card-title">01 · Datos del inmueble</span></div>
-      <label class="field"><span>Dirección</span>
-        <input type="text" id="propAddress" placeholder="Calle, número, ciudad">
+      <div class="card-head"><span class="card-title" data-i18n="sec_property">01 · Datos del inmueble</span></div>
+      <label class="field"><span data-i18n="label_address">Dirección</span>
+        <input type="text" id="propAddress" data-i18n-ph="ph_address" placeholder="Calle, número, ciudad">
       </label>
       <div class="row2">
-        <label class="field"><span>Fecha</span>
+        <label class="field"><span data-i18n="label_date">Fecha</span>
           <input type="date" id="propDate">
         </label>
-        <label class="field"><span>Referencia (opcional)</span>
-          <input type="text" id="propRef" placeholder="Ref. catastral / nº contrato">
+        <label class="field"><span data-i18n="label_ref">Referencia (opcional)</span>
+          <input type="text" id="propRef" data-i18n-ph="ph_ref" placeholder="Ref. catastral / nº contrato">
         </label>
       </div>
-      <label class="field"><span>Motivo</span>
+      <label class="field"><span data-i18n="label_reason">Motivo</span>
         <select id="propReason">
-          <option value="Inicio de alquiler">Inicio de alquiler</option>
-          <option value="Fin de alquiler">Fin de alquiler</option>
-          <option value="Comprobación periódica">Comprobación periódica</option>
-          <option value="Arreglos">Arreglos</option>
-          <option value="Otro">Otro</option>
+          <option value="inicio" data-i18n="reason_inicio">Inicio de alquiler</option>
+          <option value="fin" data-i18n="reason_fin">Fin de alquiler</option>
+          <option value="revision" data-i18n="reason_revision">Comprobación periódica</option>
+          <option value="arreglos" data-i18n="reason_arreglos">Arreglos</option>
+          <option value="otro" data-i18n="reason_otro">Otro</option>
         </select>
       </label>
     </section>
 
     <section class="card">
-      <div class="card-head"><span class="card-title">02 · Propietario</span></div>
-      <div class="row2">
-        <label class="field"><span>Nombre completo</span>
-          <input type="text" id="ownerName" placeholder="Nombre y apellidos">
-        </label>
-        <label class="field"><span>DNI / NIE</span>
-          <input type="text" id="ownerDoc" placeholder="00000000A">
-        </label>
-      </div>
-      <div class="row2">
-        <label class="field"><span>Email</span>
-          <input type="email" id="ownerEmail" placeholder="propietario@correo.com">
-        </label>
-        <label class="field"><span>Teléfono</span>
-          <input type="tel" id="ownerPhone" placeholder="+34 600 000 000">
-        </label>
-      </div>
+      <div class="card-head"><span class="card-title" data-i18n="sec_owner">02 · Propietario</span></div>
+      <div id="ownersList"></div>
+      <button class="add-tenant-btn" id="addOwnerBtn" data-i18n="btn_add_owner">+ Añadir propietario</button>
     </section>
 
     <section class="card">
-      <div class="card-head"><span class="card-title">03 · Inquilinos</span></div>
+      <div class="card-head"><span class="card-title" data-i18n="sec_tenants">03 · Inquilinos</span></div>
       <div id="tenantsList"></div>
-      <button class="add-tenant-btn" id="addTenantBtn">+ Añadir inquilino</button>
+      <button class="add-tenant-btn" id="addTenantBtn" data-i18n="btn_add_tenant">+ Añadir inquilino</button>
     </section>
 
     <section class="card">
-      <div class="card-head"><span class="card-title">04 · Otros emails</span></div>
+      <div class="card-head"><span class="card-title" data-i18n="sec_extra">04 · Otros emails</span></div>
       <label class="field">
-        <input type="text" id="extraEmails" placeholder="gestor@correo.com, abogado@correo.com">
+        <input type="text" id="extraEmails" data-i18n-ph="ph_extra" placeholder="gestor@correo.com, abogado@correo.com">
       </label>
     </section>
 
     <section class="card">
-      <div class="card-head"><span class="card-title">05 · Estancias y fotos</span></div>
+      <div class="card-head"><span class="card-title" data-i18n="sec_rooms">05 · Estancias y fotos</span></div>
       <div id="roomsList"></div>
-      <button class="add-room-btn" id="addRoomBtn">+ Añadir estancia</button>
+      <button class="add-room-btn" id="addRoomBtn" data-i18n="btn_add_room">+ Añadir estancia</button>
     </section>
 
   </div>
@@ -327,14 +318,14 @@
   <div id="stepReview">
 
     <section class="card">
-      <div class="card-head"><span class="card-title">Revisión de fotos y comentarios</span></div>
-      <div class="hint" style="margin-bottom:12px;">Comprueba que todo está correcto antes de firmar. Si falta algo, vuelve atrás y edítalo.</div>
+      <div class="card-head"><span class="card-title" data-i18n="review_title">Revisión de fotos y comentarios</span></div>
+      <div class="hint" style="margin-bottom:12px;" data-i18n="review_hint">Comprueba que todo está correcto antes de firmar. Si falta algo, vuelve atrás y edítalo.</div>
       <div id="reviewRooms"></div>
     </section>
 
     <section class="card">
-      <div class="card-head"><span class="card-title">Firma de los inquilinos</span></div>
-      <div class="hint" style="margin-bottom:12px;">Cada inquilino firma para confirmar que el inventario refleja el estado real del piso.</div>
+      <div class="card-head"><span class="card-title" data-i18n="sig_title">Firma de los inquilinos</span></div>
+      <div class="hint" style="margin-bottom:12px;" data-i18n="sig_hint">Cada inquilino firma para confirmar que el inventario refleja el estado real del piso.</div>
       <div id="reviewSignatures"></div>
     </section>
 
@@ -343,12 +334,12 @@
 </main>
 
 <footer class="actions" id="footerFill">
-  <button class="btn primary" id="goReviewBtn">Revisar fotos y firmar →</button>
+  <button class="btn primary" id="goReviewBtn" data-i18n="btn_go_review">Revisar fotos y firmar →</button>
 </footer>
 
 <footer class="actions" id="footerReview" style="display:none;">
-  <button class="btn ghost" id="backToFillBtn">← Volver</button>
-  <button class="btn primary" id="downloadBtn">Descargar</button>
+  <button class="btn ghost" id="backToFillBtn" data-i18n="btn_back">← Volver</button>
+  <button class="btn primary" id="downloadBtn" data-i18n="btn_download">Descargar</button>
 </footer>
 
 <div id="lightbox" class="lightbox">
@@ -362,16 +353,202 @@
 </div>
 
 <script>
+// ================= I18N =================
+const I18N = {
+  es: {
+    app_title:'Inventario del piso',
+    app_subtitle:'Fotos por estancia + firmas de inquilinos + PDF resumen',
+    step1_bold:'Paso 1 de 2', step1_rest:' · Rellenar datos y fotos',
+    step2_bold:'Paso 2 de 2', step2_rest:' · Revisar y firmar',
+    sec_property:'01 · Datos del inmueble',
+    label_address:'Dirección', ph_address:'Calle, número, ciudad',
+    label_date:'Fecha',
+    label_ref:'Referencia (opcional)', ph_ref:'Ref. catastral / nº contrato',
+    label_reason:'Motivo',
+    reason_inicio:'Inicio de alquiler', reason_fin:'Fin de alquiler',
+    reason_revision:'Comprobación periódica', reason_arreglos:'Arreglos', reason_otro:'Otro',
+    sec_owner:'02 · Propietarios',
+    btn_add_owner:'+ Añadir propietario',
+    owner_label:'Propietario',
+    title_remove_owner:'Eliminar propietario',
+    label_fullname:'Nombre completo', ph_fullname:'Nombre y apellidos',
+    label_doc:'DNI / NIE',
+    label_email:'Email', ph_owner_email:'propietario@correo.com',
+    label_phone:'Teléfono', ph_phone:'+34 600 000 000',
+    sec_tenants:'03 · Inquilinos',
+    btn_add_tenant:'+ Añadir inquilino',
+    tenant_label:'Inquilino',
+    ph_tenant_email:'inquilino@correo.com',
+    title_remove_tenant:'Eliminar inquilino',
+    sec_extra:'04 · Otros emails',
+    ph_extra:'gestor@correo.com, abogado@correo.com',
+    sec_rooms:'05 · Estancias y fotos',
+    btn_add_room:'+ Añadir estancia',
+    room_default:'Estancia',
+    room_salon:'Salón', room_cocina:'Cocina', room_bano:'Baño', room_dormitorio:'Dormitorio',
+    stamp_photos_n:(n)=> n + (n===1 ? ' FOTO' : ' FOTOS'),
+    stamp_none:'SIN FOTOS',
+    btn_add_photo:'📷 Añadir fotos',
+    ph_caption:'Comentario (ej. mancha en pared)',
+    title_remove_room:'Eliminar estancia',
+    review_title:'Revisión de fotos y comentarios',
+    review_hint:'Comprueba que todo está correcto antes de firmar. Si falta algo, vuelve atrás y edítalo.',
+    review_empty_photos:'Todavía no se han añadido fotos.',
+    sig_title:'Firma de los inquilinos',
+    sig_hint:'Cada inquilino firma para confirmar que el inventario refleja el estado real del piso.',
+    review_empty_tenants:'No se ha añadido ningún inquilino.',
+    btn_clear_sig:'BORRAR',
+    sig_confirm_hint:'Firma para confirmar el estado reflejado en el inventario.',
+    no_comment:'Sin comentario',
+    btn_back:'← Volver',
+    btn_download:'Descargar',
+    toast_generating_pdf:'Generando PDF…',
+    toast_downloaded_both:'PDF y fotos descargados en tu carpeta de Descargas.',
+    toast_downloaded_pdf:'PDF descargado en tu carpeta de Descargas.',
+    pdf_title:'Inventario fotográfico',
+    pdf_property:'Inmueble',
+    pdf_address:'Dirección', pdf_no_address:'(sin dirección)',
+    pdf_date:'Fecha', pdf_no_date:'(sin fecha)',
+    pdf_ref:'Ref',
+    pdf_reason:'Motivo',
+    pdf_rooms_summary:'Resumen de estancias',
+    pdf_photo_count:(n)=> n + (n===1 ? ' foto' : ' fotos'),
+    pdf_owner:'Propietario', pdf_no_name:'(sin nombre)',
+    pdf_doc:'DNI/NIE', pdf_email:'Email', pdf_phone:'Tel',
+    pdf_other_emails:'Otros emails',
+    pdf_tenant:'Inquilino',
+    pdf_pending_signature:'(Pendiente de firma)'
+  },
+  en: {
+    app_title:'Property inventory',
+    app_subtitle:'Room-by-room photos + tenant signatures + PDF summary',
+    step1_bold:'Step 1 of 2', step1_rest:' · Fill in details and photos',
+    step2_bold:'Step 2 of 2', step2_rest:' · Review and sign',
+    sec_property:'01 · Property details',
+    label_address:'Address', ph_address:'Street, number, city',
+    label_date:'Date',
+    label_ref:'Reference (optional)', ph_ref:'Cadastral ref. / contract no.',
+    label_reason:'Reason',
+    reason_inicio:'Start of tenancy', reason_fin:'End of tenancy',
+    reason_revision:'Periodic inspection', reason_arreglos:'Repairs', reason_otro:'Other',
+    sec_owner:'02 · Owners',
+    btn_add_owner:'+ Add owner',
+    owner_label:'Owner',
+    title_remove_owner:'Remove owner',
+    label_fullname:'Full name', ph_fullname:'First and last name',
+    label_doc:'National ID',
+    label_email:'Email', ph_owner_email:'owner@email.com',
+    label_phone:'Phone', ph_phone:'+1 555 000 0000',
+    sec_tenants:'03 · Tenants',
+    btn_add_tenant:'+ Add tenant',
+    tenant_label:'Tenant',
+    ph_tenant_email:'tenant@email.com',
+    title_remove_tenant:'Remove tenant',
+    sec_extra:'04 · Other emails',
+    ph_extra:'manager@email.com, lawyer@email.com',
+    sec_rooms:'05 · Rooms and photos',
+    btn_add_room:'+ Add room',
+    room_default:'Room',
+    room_salon:'Living room', room_cocina:'Kitchen', room_bano:'Bathroom', room_dormitorio:'Bedroom',
+    stamp_photos_n:(n)=> n + (n===1 ? ' PHOTO' : ' PHOTOS'),
+    stamp_none:'NO PHOTOS',
+    btn_add_photo:'📷 Add photos',
+    ph_caption:'Comment (e.g. stain on wall)',
+    title_remove_room:'Remove room',
+    review_title:'Photo and comment review',
+    review_hint:"Check everything is correct before signing. Go back to edit if something's missing.",
+    review_empty_photos:'No photos added yet.',
+    sig_title:'Tenant signatures',
+    sig_hint:"Each tenant signs to confirm the inventory reflects the property's actual condition.",
+    review_empty_tenants:'No tenants added.',
+    btn_clear_sig:'CLEAR',
+    sig_confirm_hint:'Sign to confirm the condition shown in the inventory.',
+    no_comment:'No comment',
+    btn_back:'← Back',
+    btn_download:'Download',
+    toast_generating_pdf:'Generating PDF…',
+    toast_downloaded_both:'PDF and photos downloaded to your Downloads folder.',
+    toast_downloaded_pdf:'PDF downloaded to your Downloads folder.',
+    pdf_title:'Photo inventory',
+    pdf_property:'Property',
+    pdf_address:'Address', pdf_no_address:'(no address)',
+    pdf_date:'Date', pdf_no_date:'(no date)',
+    pdf_ref:'Ref',
+    pdf_reason:'Reason',
+    pdf_rooms_summary:'Room summary',
+    pdf_photo_count:(n)=> n + (n===1 ? ' photo' : ' photos'),
+    pdf_owner:'Owner', pdf_no_name:'(no name)',
+    pdf_doc:'ID', pdf_email:'Email', pdf_phone:'Phone',
+    pdf_other_emails:'Other emails',
+    pdf_tenant:'Tenant',
+    pdf_pending_signature:'(Signature pending)'
+  }
+};
+
+let lang = 'es';
+function t(key){
+  const v = I18N[lang][key];
+  return typeof v === 'function' ? v : v;
+}
+function tr(key, ...args){
+  const v = I18N[lang][key];
+  return typeof v === 'function' ? v(...args) : v;
+}
+
+function applyStaticTranslations(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key = el.getAttribute('data-i18n');
+    if(I18N[lang][key] !== undefined) el.textContent = I18N[lang][key];
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el=>{
+    const key = el.getAttribute('data-i18n-ph');
+    if(I18N[lang][key] !== undefined) el.placeholder = I18N[lang][key];
+  });
+  document.documentElement.lang = lang;
+}
+
+function setLang(newLang){
+  lang = newLang;
+  document.getElementById('langEs').classList.toggle('active', lang==='es');
+  document.getElementById('langEn').classList.toggle('active', lang==='en');
+  applyStaticTranslations();
+  // actualizar indicador de paso según la vista actual
+  const inReview = document.getElementById('stepReview').style.display === 'block';
+  document.getElementById('stepIndicator').innerHTML = inReview
+    ? '<b>' + t('step2_bold') + '</b> ' + t('step2_rest')
+    : '<b>' + t('step1_bold') + '</b> ' + t('step1_rest');
+  // retraducir nombres de estancia que no hayan sido renombrados a mano
+  rooms.forEach(r=>{
+    if(r.autoName) r.name = computeRoomName(r.kind, r.num);
+  });
+  renderRooms();
+  renderTenants();
+  renderOwners();
+  if(inReview) renderReview();
+}
+document.getElementById('langEs').addEventListener('click', ()=> setLang('es'));
+document.getElementById('langEn').addEventListener('click', ()=> setLang('en'));
+
 // ---------- state (in-memory only) ----------
 let rooms = [];
 let roomCounter = 0;
 let tenants = [];
 let tenantCounter = 0;
+let owners = [];
+let ownerCounter = 0;
 
 // ================= ROOMS =================
-function addRoom(name){
+function computeRoomName(kind, num){
+  if(kind === 'dormitorio') return t('room_dormitorio') + ' ' + num;
+  if(kind === 'generic' || !kind) return t('room_default') + ' ' + num;
+  return t('room_' + kind);
+}
+
+function addRoom(kind, numOverride){
   roomCounter++;
-  rooms.push({ id: roomCounter, name: name || ('Estancia ' + roomCounter), photos: [] });
+  const useKind = kind || 'generic';
+  const num = numOverride || roomCounter;
+  rooms.push({ id: roomCounter, kind: useKind, num, autoName:true, name: computeRoomName(useKind, num), photos: [] });
   renderRooms();
 }
 
@@ -386,12 +563,12 @@ function renderRooms(){
       <div class="room-head">
         <span class="room-tab">${String(room.id).padStart(2,'0')}</span>
         <span class="room-name"><input type="text" value="${escapeHtml(room.name)}" data-room="${room.id}" class="room-name-input"></span>
-        <span class="stamp ${hasPhotos ? '' : 'pending'}">${hasPhotos ? room.photos.length + ' FOTO' + (room.photos.length>1?'S':'') : 'SIN FOTOS'}</span>
-        <button class="remove-room" data-remove="${room.id}" title="Eliminar estancia">✕</button>
+        <span class="stamp ${hasPhotos ? '' : 'pending'}">${hasPhotos ? tr('stamp_photos_n', room.photos.length) : t('stamp_none')}</span>
+        <button class="remove-room" data-remove="${room.id}" title="${t('title_remove_room')}">✕</button>
       </div>
       <div class="room-body">
         <div class="photo-grid" id="grid-${room.id}"></div>
-        <button class="add-photo-btn" data-addphoto="${room.id}">📷 Añadir fotos</button>
+        <button class="add-photo-btn" data-addphoto="${room.id}">${t('btn_add_photo')}</button>
         <input type="file" accept="image/*" capture="environment" multiple id="file-${room.id}">
       </div>
     `;
@@ -405,7 +582,7 @@ function renderRooms(){
           <img src="${p.dataUrl}">
           <button class="del" data-delphoto="${room.id}:${idx}">✕</button>
         </div>
-        <input type="text" class="cap-input" placeholder="Comentario (ej. mancha en pared)" value="${escapeHtml(p.caption||'')}" data-capinput="${room.id}:${idx}">
+        <input type="text" class="cap-input" placeholder="${t('ph_caption')}" value="${escapeHtml(p.caption||'')}" data-capinput="${room.id}:${idx}">
       `;
       grid.appendChild(tile);
     });
@@ -414,7 +591,7 @@ function renderRooms(){
   list.querySelectorAll('.room-name-input').forEach(inp=>{
     inp.addEventListener('input', e=>{
       const r = rooms.find(x=>x.id==e.target.dataset.room);
-      if(r) r.name = e.target.value;
+      if(r){ r.name = e.target.value; r.autoName = false; }
     });
   });
   list.querySelectorAll('[data-remove]').forEach(btn=>{
@@ -434,7 +611,7 @@ function renderRooms(){
       const room = rooms.find(x=>x.id == roomId);
       for(const file of e.target.files){
         const img = await fileToDataUrl(file);
-        room.photos.push({ dataUrl: img.dataUrl, width: img.width, height: img.height, caption:'', originalBlob: file, originalName: file.name });
+        room.photos.push({ dataUrl: img.dataUrl, width: img.width, height: img.height, caption:'', originalName: file.name });
       }
       renderRooms();
     });
@@ -469,30 +646,29 @@ function addTenant(){
 function renderTenants(){
   const list = document.getElementById('tenantsList');
   list.innerHTML = '';
-  tenants.forEach(t=>{
+  tenants.forEach((tn, idx)=>{
     const el = document.createElement('div');
     el.className = 'tenant';
     el.innerHTML = `
       <div class="tenant-head">
-        <span class="room-tab">${String(t.id).padStart(2,'0')}</span>
-        <span class="room-name" style="flex:1; font-weight:600; font-size:14.5px;">Inquilino ${t.id}</span>
-        <button class="remove-tenant" data-removetenant="${t.id}" title="Eliminar inquilino">✕</button>
+        <span class="room-name" style="flex:1; font-weight:600; font-size:14.5px;">${t('tenant_label')} ${idx+1}</span>
+        <button class="remove-tenant" data-removetenant="${tn.id}" title="${t('title_remove_tenant')}">✕</button>
       </div>
       <div class="tenant-body">
         <div class="row2">
-          <label class="field"><span>Nombre completo</span>
-            <input type="text" class="ten-name" data-tenant="${t.id}" value="${escapeHtml(t.name)}" placeholder="Nombre y apellidos">
+          <label class="field"><span>${t('label_fullname')}</span>
+            <input type="text" class="ten-name" data-tenant="${tn.id}" value="${escapeHtml(tn.name)}" placeholder="${t('ph_fullname')}">
           </label>
-          <label class="field"><span>DNI / NIE</span>
-            <input type="text" class="ten-doc" data-tenant="${t.id}" value="${escapeHtml(t.docId)}" placeholder="00000000A">
+          <label class="field"><span>${t('label_doc')}</span>
+            <input type="text" class="ten-doc" data-tenant="${tn.id}" value="${escapeHtml(tn.docId)}" placeholder="00000000A">
           </label>
         </div>
         <div class="row2">
-          <label class="field"><span>Email</span>
-            <input type="email" class="ten-email" data-tenant="${t.id}" value="${escapeHtml(t.email)}" placeholder="inquilino@correo.com">
+          <label class="field"><span>${t('label_email')}</span>
+            <input type="email" class="ten-email" data-tenant="${tn.id}" value="${escapeHtml(tn.email)}" placeholder="${t('ph_tenant_email')}">
           </label>
-          <label class="field"><span>Teléfono</span>
-            <input type="tel" class="ten-phone" data-tenant="${t.id}" value="${escapeHtml(t.phone)}" placeholder="+34 600 000 000">
+          <label class="field"><span>${t('label_phone')}</span>
+            <input type="tel" class="ten-phone" data-tenant="${tn.id}" value="${escapeHtml(tn.phone)}" placeholder="${t('ph_phone')}">
           </label>
         </div>
       </div>
@@ -501,37 +677,96 @@ function renderTenants(){
   });
 
   list.querySelectorAll('.ten-name').forEach(i=>i.addEventListener('input', e=>{
-    tenants.find(t=>t.id==e.target.dataset.tenant).name = e.target.value;
+    tenants.find(tn=>tn.id==e.target.dataset.tenant).name = e.target.value;
   }));
   list.querySelectorAll('.ten-doc').forEach(i=>i.addEventListener('input', e=>{
-    tenants.find(t=>t.id==e.target.dataset.tenant).docId = e.target.value;
+    tenants.find(tn=>tn.id==e.target.dataset.tenant).docId = e.target.value;
   }));
   list.querySelectorAll('.ten-email').forEach(i=>i.addEventListener('input', e=>{
-    tenants.find(t=>t.id==e.target.dataset.tenant).email = e.target.value;
+    tenants.find(tn=>tn.id==e.target.dataset.tenant).email = e.target.value;
   }));
   list.querySelectorAll('.ten-phone').forEach(i=>i.addEventListener('input', e=>{
-    tenants.find(t=>t.id==e.target.dataset.tenant).phone = e.target.value;
+    tenants.find(tn=>tn.id==e.target.dataset.tenant).phone = e.target.value;
   }));
   list.querySelectorAll('[data-removetenant]').forEach(btn=>{
     btn.addEventListener('click', e=>{
-      tenants = tenants.filter(t=>t.id != e.target.dataset.removetenant);
+      tenants = tenants.filter(tn=>tn.id != e.target.dataset.removetenant);
       renderTenants();
     });
   });
 }
 
+// ================= OWNERS =================
+function addOwner(){
+  ownerCounter++;
+  owners.push({ id: ownerCounter, name:'', docId:'', email:'', phone:'' });
+  renderOwners();
+}
+
+function renderOwners(){
+  const list = document.getElementById('ownersList');
+  list.innerHTML = '';
+  owners.forEach((ow, idx)=>{
+    const el = document.createElement('div');
+    el.className = 'tenant';
+    el.innerHTML = `
+      <div class="tenant-head">
+        <span class="room-name" style="flex:1; font-weight:600; font-size:14.5px;">${t('owner_label')} ${idx+1}</span>
+        <button class="remove-tenant" data-removeowner="${ow.id}" title="${t('title_remove_owner')}">✕</button>
+      </div>
+      <div class="tenant-body">
+        <div class="row2">
+          <label class="field"><span>${t('label_fullname')}</span>
+            <input type="text" class="own-name" data-owner="${ow.id}" value="${escapeHtml(ow.name)}" placeholder="${t('ph_fullname')}">
+          </label>
+          <label class="field"><span>${t('label_doc')}</span>
+            <input type="text" class="own-doc" data-owner="${ow.id}" value="${escapeHtml(ow.docId)}" placeholder="00000000A">
+          </label>
+        </div>
+        <div class="row2">
+          <label class="field"><span>${t('label_email')}</span>
+            <input type="email" class="own-email" data-owner="${ow.id}" value="${escapeHtml(ow.email)}" placeholder="${t('ph_owner_email')}">
+          </label>
+          <label class="field"><span>${t('label_phone')}</span>
+            <input type="tel" class="own-phone" data-owner="${ow.id}" value="${escapeHtml(ow.phone)}" placeholder="${t('ph_phone')}">
+          </label>
+        </div>
+      </div>
+    `;
+    list.appendChild(el);
+  });
+
+  list.querySelectorAll('.own-name').forEach(i=>i.addEventListener('input', e=>{
+    owners.find(ow=>ow.id==e.target.dataset.owner).name = e.target.value;
+  }));
+  list.querySelectorAll('.own-doc').forEach(i=>i.addEventListener('input', e=>{
+    owners.find(ow=>ow.id==e.target.dataset.owner).docId = e.target.value;
+  }));
+  list.querySelectorAll('.own-email').forEach(i=>i.addEventListener('input', e=>{
+    owners.find(ow=>ow.id==e.target.dataset.owner).email = e.target.value;
+  }));
+  list.querySelectorAll('.own-phone').forEach(i=>i.addEventListener('input', e=>{
+    owners.find(ow=>ow.id==e.target.dataset.owner).phone = e.target.value;
+  }));
+  list.querySelectorAll('[data-removeowner]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      owners = owners.filter(ow=>ow.id != e.target.dataset.removeowner);
+      renderOwners();
+    });
+  });
+}
+
 // ================= REVIEW STEP =================
-let reviewPhotoList = []; // flattened list for lightbox navigation
+let reviewPhotoList = [];
 let lightboxIndex = 0;
 
 function renderReview(){
-  // photos + comments, read-only
   const reviewRooms = document.getElementById('reviewRooms');
   reviewRooms.innerHTML = '';
   reviewPhotoList = [];
   const roomsWithPhotos = rooms.filter(r=>r.photos.length>0);
   if(roomsWithPhotos.length === 0){
-    reviewRooms.innerHTML = '<div class="review-empty">Todavía no se han añadido fotos.</div>';
+    reviewRooms.innerHTML = '<div class="review-empty">' + t('review_empty_photos') + '</div>';
   }
   roomsWithPhotos.forEach(room=>{
     const block = document.createElement('div');
@@ -551,7 +786,7 @@ function renderReview(){
       tile.className = 'photo-tile';
       tile.innerHTML = `
         <div class="thumb-wrap" data-lightbox="${flatIndex}"><img src="${p.dataUrl}"></div>
-        <div class="cap-readonly">${p.caption ? escapeHtml(p.caption) : '<span style="opacity:.5">Sin comentario</span>'}</div>
+        <div class="cap-readonly">${p.caption ? escapeHtml(p.caption) : '<span style="opacity:.5">' + t('no_comment') + '</span>'}</div>
       `;
       grid.appendChild(tile);
     });
@@ -561,25 +796,23 @@ function renderReview(){
     el.addEventListener('click', ()=> openLightbox(parseInt(el.dataset.lightbox,10)));
   });
 
-  // signature pads, one per tenant
   const reviewSig = document.getElementById('reviewSignatures');
   reviewSig.innerHTML = '';
   if(tenants.length === 0){
-    reviewSig.innerHTML = '<div class="review-empty">No se ha añadido ningún inquilino.</div>';
+    reviewSig.innerHTML = '<div class="review-empty">' + t('review_empty_tenants') + '</div>';
   }
-  tenants.forEach(t=>{
+  tenants.forEach((tn, idx)=>{
     const wrap = document.createElement('div');
     wrap.className = 'tenant';
     wrap.innerHTML = `
       <div class="tenant-head">
-        <span class="room-tab">${String(t.id).padStart(2,'0')}</span>
-        <span class="room-name" style="flex:1; font-weight:600; font-size:14.5px;">${escapeHtml(t.name || ('Inquilino ' + t.id))}</span>
+        <span class="room-name" style="flex:1; font-weight:600; font-size:14.5px;">${escapeHtml(tn.name || (t('tenant_label') + ' ' + (idx+1)))}</span>
       </div>
       <div class="tenant-body">
-        <div class="sig-pad-wrap"><canvas class="sigPad" data-canvasfor="${t.id}"></canvas></div>
+        <div class="sig-pad-wrap"><canvas class="sigPad" data-canvasfor="${tn.id}"></canvas></div>
         <div class="sig-actions">
-          <span class="hint">Firma para confirmar el estado reflejado en el inventario.</span>
-          <button class="link-btn" data-clearsig="${t.id}">BORRAR</button>
+          <span class="hint">${t('sig_confirm_hint')}</span>
+          <button class="link-btn" data-clearsig="${tn.id}">${t('btn_clear_sig')}</button>
         </div>
       </div>
     `;
@@ -587,13 +820,13 @@ function renderReview(){
   });
   reviewSig.querySelectorAll('[data-clearsig]').forEach(btn=>{
     btn.addEventListener('click', e=>{
-      const t = tenants.find(x=>x.id == e.target.dataset.clearsig);
-      if(t && t.ctx){ t.ctx.clearRect(0,0,t.canvasEl.width,t.canvasEl.height); t.sigEmpty = true; }
+      const tn = tenants.find(x=>x.id == e.target.dataset.clearsig);
+      if(tn && tn.ctx){ tn.ctx.clearRect(0,0,tn.canvasEl.width,tn.canvasEl.height); tn.sigEmpty = true; }
     });
   });
   reviewSig.querySelectorAll('canvas.sigPad').forEach(c=>{
-    const t = tenants.find(x=>x.id == c.dataset.canvasfor);
-    setupSignaturePad(c, t);
+    const tn = tenants.find(x=>x.id == c.dataset.canvasfor);
+    setupSignaturePad(c, tn);
   });
 }
 
@@ -648,7 +881,7 @@ function renderLightbox(){
     capEl.textContent = photo.caption;
     capEl.classList.remove('empty');
   } else {
-    capEl.textContent = 'Sin comentario';
+    capEl.textContent = t('no_comment');
     capEl.classList.add('empty');
   }
   document.getElementById('lightboxCounter').textContent = (lightboxIndex+1) + ' / ' + reviewPhotoList.length;
@@ -676,7 +909,7 @@ function goToReview(){
   document.getElementById('stepReview').style.display = 'block';
   document.getElementById('footerFill').style.display = 'none';
   document.getElementById('footerReview').style.display = 'flex';
-  document.getElementById('stepIndicator').innerHTML = '<b>Paso 2 de 2</b> · Revisar y firmar';
+  document.getElementById('stepIndicator').innerHTML = '<b>' + t('step2_bold') + '</b> ' + t('step2_rest');
   renderReview();
   prebuildZip();
   window.scrollTo(0,0);
@@ -686,13 +919,58 @@ function goToFill(){
   document.getElementById('stepReview').style.display = 'none';
   document.getElementById('footerFill').style.display = 'flex';
   document.getElementById('footerReview').style.display = 'none';
-  document.getElementById('stepIndicator').innerHTML = '<b>Paso 1 de 2</b> · Rellenar datos y fotos';
+  document.getElementById('stepIndicator').innerHTML = '<b>' + t('step1_bold') + '</b> ' + t('step1_rest');
   window.scrollTo(0,0);
 }
 
 // ================= helpers =================
 function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function getExifTimestamp(file){
+  try{
+    const data = await exifr.parse(file, { pick:['DateTimeOriginal','CreateDate','ModifyDate'] });
+    const d = data && (data.DateTimeOriginal || data.CreateDate || data.ModifyDate);
+    if(d instanceof Date && !isNaN(d)) return d;
+  }catch(e){ /* sin EXIF o no legible */ }
+  return null;
+}
+
+function formatTimestamp(d){
+  const pad = n => String(n).padStart(2,'0');
+  return pad(d.getDate()) + '/' + pad(d.getMonth()+1) + '/' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+function stampText(canvas, ctx, text, corner){
+  const w = canvas.width, h = canvas.height;
+  const fontSize = Math.max(Math.round(w * 0.028), 22);
+  ctx.font = fontSize + 'px monospace';
+  const maxTextW = w - fontSize * 1.2;
+  let displayText = text;
+  // recortar direcciones muy largas para que no se salgan de la foto
+  while(ctx.measureText(displayText).width > maxTextW && displayText.length > 4){
+    displayText = displayText.slice(0, -2);
+  }
+  if(displayText !== text) displayText = displayText.slice(0, -1) + '…';
+  const textWidth = ctx.measureText(displayText).width;
+  const margin = fontSize * 0.6;
+  const x = corner === 'left' ? margin : w - textWidth - margin;
+  const y = h - fontSize - margin;
+
+  ctx.textBaseline = 'middle';
+  // sombra suave para que el texto se lea bien sobre cualquier fondo
+  ctx.shadowColor = 'rgba(0,0,0,0.85)';
+  ctx.shadowBlur = fontSize * 0.25;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillText(displayText, x, y + fontSize/2);
+  ctx.shadowColor = 'transparent';
+}
+
 async function fileToDataUrl(file){
+  const exifDate = await getExifTimestamp(file);
+  const timestampText = formatTimestamp(exifDate || new Date());
+  const addressText = document.getElementById('propAddress').value.trim();
   try{
     const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
     const canvas = document.createElement('canvas');
@@ -700,9 +978,10 @@ async function fileToDataUrl(file){
     canvas.height = bitmap.height;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(bitmap, 0, 0);
+    stampText(canvas, ctx, timestampText, 'right');
+    if(addressText) stampText(canvas, ctx, addressText, 'left');
     return { dataUrl: canvas.toDataURL('image/jpeg', 0.85), width: bitmap.width, height: bitmap.height };
   }catch(e){
-    // fallback for browsers without createImageBitmap orientation support
     const dataUrl = await new Promise((res,rej)=>{
       const r = new FileReader();
       r.onload = ()=>res(r.result);
@@ -715,19 +994,20 @@ async function fileToDataUrl(file){
 
 document.getElementById('addRoomBtn').addEventListener('click', ()=> addRoom());
 document.getElementById('addTenantBtn').addEventListener('click', ()=> addTenant());
+document.getElementById('addOwnerBtn').addEventListener('click', ()=> addOwner());
 document.getElementById('goReviewBtn').addEventListener('click', goToReview);
 document.getElementById('backToFillBtn').addEventListener('click', goToFill);
 
 // seed
-['Salón','Cocina','Baño','Dormitorio 1'].forEach(n=>addRoom(n));
 addTenant();
+addOwner();
 
 // ---------- toast ----------
 function toast(msg, ms=2600){
-  const t = document.createElement('div');
-  t.className = 'toast'; t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(()=>t.remove(), ms);
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), ms);
 }
 
 // ---------- PDF generation ----------
@@ -737,81 +1017,71 @@ async function buildPdf(){
   const pageW = 210, margin = 16;
   let y = margin;
 
-  const address = document.getElementById('propAddress').value || '(sin dirección)';
-  const date = document.getElementById('propDate').value || '(sin fecha)';
+  const address = document.getElementById('propAddress').value || t('pdf_no_address');
+  const date = document.getElementById('propDate').value || t('pdf_no_date');
   const ref = document.getElementById('propRef').value;
-  const reason = document.getElementById('propReason').value;
+  const reasonValue = document.getElementById('propReason').value;
+  const reason = t('reason_' + reasonValue);
 
   doc.setFont('helvetica','bold'); doc.setFontSize(18);
-  doc.text('Inventario fotográfico', margin, y); y += 9;
+  doc.text(t('pdf_title'), margin, y); y += 9;
   doc.setDrawColor(217,83,30); doc.setLineWidth(0.8);
   doc.line(margin, y, pageW-margin, y); y += 8;
 
   doc.setFont('helvetica','bold'); doc.setFontSize(11);
-  doc.text('Inmueble', margin, y); y += 5.5;
+  doc.text(t('pdf_property'), margin, y); y += 5.5;
   doc.setFont('helvetica','normal'); doc.setFontSize(10);
-  doc.text('Dirección: ' + address, margin, y); y += 5;
-  doc.text('Fecha: ' + date + (ref ? '   ·   Ref: ' + ref : ''), margin, y); y += 5;
-  doc.text('Motivo: ' + reason, margin, y); y += 8;
+  doc.text(t('pdf_address') + ': ' + address, margin, y); y += 5;
+  doc.text(t('pdf_date') + ': ' + date + (ref ? '   ·   ' + t('pdf_ref') + ': ' + ref : ''), margin, y); y += 5;
+  doc.text(t('pdf_reason') + ': ' + reason, margin, y); y += 8;
 
-  // rooms summary
   doc.setFont('helvetica','bold'); doc.setFontSize(11);
-  doc.text('Resumen de estancias', margin, y); y += 5.5;
+  doc.text(t('pdf_rooms_summary'), margin, y); y += 5.5;
   doc.setFont('helvetica','normal'); doc.setFontSize(10);
   rooms.forEach(r=>{
-    doc.text('· ' + r.name + ' — ' + r.photos.length + ' foto(s)', margin, y);
+    doc.text('· ' + r.name + ' — ' + tr('pdf_photo_count', r.photos.length), margin, y);
     y += 5;
   });
   y += 4;
 
-  // owner
-  const ownerName = document.getElementById('ownerName').value;
-  const ownerDoc = document.getElementById('ownerDoc').value;
-  const ownerEmailPdf = document.getElementById('ownerEmail').value;
-  const ownerPhone = document.getElementById('ownerPhone').value;
-  if(ownerName || ownerDoc || ownerEmailPdf || ownerPhone){
+  for(const ow of owners){
     if(y > 260){ doc.addPage(); y = margin; }
     doc.setFont('helvetica','bold'); doc.setFontSize(11);
-    doc.text('Propietario: ' + (ownerName || '(sin nombre)'), margin, y); y += 5;
+    doc.text(t('pdf_owner') + ': ' + (ow.name || t('pdf_no_name')), margin, y); y += 5;
     doc.setFont('helvetica','normal'); doc.setFontSize(10);
-    doc.text((ownerDoc ? 'DNI/NIE: ' + ownerDoc : '') + (ownerEmailPdf ? '   ·   Email: ' + ownerEmailPdf : '') + (ownerPhone ? '   ·   Tel: ' + ownerPhone : ''), margin, y);
+    doc.text((ow.docId ? t('pdf_doc') + ': ' + ow.docId : '') + (ow.email ? '   ·   ' + t('pdf_email') + ': ' + ow.email : '') + (ow.phone ? '   ·   ' + t('pdf_phone') + ': ' + ow.phone : ''), margin, y);
     y += 8;
   }
 
-  // extra cc emails (used below for the unified recipients line)
   const extraEmailsPdf = document.getElementById('extraEmails').value.split(/[,;\s]+/).map(e=>e.trim()).filter(Boolean);
-
-  // tenants + signatures
-  for(const t of tenants){
-    if(y > 250){ doc.addPage(); y = margin; }
-    doc.setFont('helvetica','bold'); doc.setFontSize(11);
-    doc.text('Inquilino: ' + (t.name || '(sin nombre)'), margin, y); y += 5;
-    doc.setFont('helvetica','normal'); doc.setFontSize(10);
-    doc.text((t.docId ? 'DNI/NIE: ' + t.docId : '') + (t.email ? '   ·   Email: ' + t.email : '') + (t.phone ? '   ·   Tel: ' + t.phone : ''), margin, y);
-    y += 6;
-    if(t.canvasEl && !t.sigEmpty){
-      const sigData = t.canvasEl.toDataURL('image/png');
-      doc.addImage(sigData, 'PNG', margin, y, 55, 20);
-      y += 24;
-    } else {
-      doc.setFont('helvetica','italic'); doc.setFontSize(9);
-      doc.text('(Pendiente de firma)', margin, y); y += 8;
-      doc.setFont('helvetica','normal'); doc.setFontSize(10);
-    }
-  }
-
-  // otros emails (copia)
   if(extraEmailsPdf.length){
     if(y > 260){ doc.addPage(); y = margin; }
     doc.setFont('helvetica','bold'); doc.setFontSize(11);
-    doc.text('Otros emails', margin, y); y += 5.5;
+    doc.text(t('pdf_other_emails'), margin, y); y += 5.5;
     doc.setFont('helvetica','normal'); doc.setFontSize(10);
     const wrappedEmails = doc.splitTextToSize(extraEmailsPdf.join('   ·   '), pageW - margin*2);
     doc.text(wrappedEmails, margin, y);
     y += wrappedEmails.length * 5 + 3;
   }
 
-  // room pages with photos + captions
+  for(const tn of tenants){
+    if(y > 250){ doc.addPage(); y = margin; }
+    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text(t('pdf_tenant') + ': ' + (tn.name || t('pdf_no_name')), margin, y); y += 5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    doc.text((tn.docId ? t('pdf_doc') + ': ' + tn.docId : '') + (tn.email ? '   ·   ' + t('pdf_email') + ': ' + tn.email : '') + (tn.phone ? '   ·   ' + t('pdf_phone') + ': ' + tn.phone : ''), margin, y);
+    y += 6;
+    if(tn.canvasEl && !tn.sigEmpty){
+      const sigData = tn.canvasEl.toDataURL('image/png');
+      doc.addImage(sigData, 'PNG', margin, y, 55, 20);
+      y += 24;
+    } else {
+      doc.setFont('helvetica','italic'); doc.setFontSize(9);
+      doc.text(t('pdf_pending_signature'), margin, y); y += 8;
+      doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    }
+  }
+
   for(const room of rooms){
     if(room.photos.length === 0) continue;
     doc.addPage();
@@ -821,7 +1091,7 @@ async function buildPdf(){
 
     const cols = 2, gap = 6;
     const cellW = (pageW - margin*2 - gap*(cols-1)) / cols;
-    const cellH = cellW * 0.75; // altura máxima de la celda
+    const cellH = cellW * 0.75;
     const capH = 5;
     let col = 0;
 
@@ -829,7 +1099,6 @@ async function buildPdf(){
       if(ry + cellH + capH > 285){ doc.addPage(); ry = margin; col = 0; }
       const x = margin + col * (cellW + gap);
 
-      // encajar la foto dentro de la celda respetando su proporción real
       let drawW = cellW, drawH = cellH;
       if(photo.width && photo.height){
         const ratio = photo.width / photo.height;
@@ -863,6 +1132,17 @@ function sanitizeFolderName(name){
   return (name || 'estancia').trim().replace(/[\\/:*?"<>|]+/g,'_') || 'estancia';
 }
 
+let cachedZipFile = null;
+
+async function prebuildZip(){
+  const totalPhotos = rooms.reduce((n,r)=>n+r.photos.length,0);
+  if(totalPhotos === 0){ cachedZipFile = null; return; }
+  try{
+    const zipBlob = await buildPhotosZip();
+    cachedZipFile = new File([zipBlob], zipFilename(), { type:'application/zip' });
+  }catch(e){ cachedZipFile = null; }
+}
+
 async function buildPhotosZip(){
   const zip = new JSZip();
   rooms.forEach(room=>{
@@ -870,9 +1150,8 @@ async function buildPhotosZip(){
     const folderName = String(room.id).padStart(2,'0') + '_' + sanitizeFolderName(room.name);
     const folder = zip.folder(folderName);
     room.photos.forEach((p, idx)=>{
-      const ext = (p.originalName && p.originalName.includes('.')) ? p.originalName.split('.').pop() : 'jpg';
       const base = String(idx+1).padStart(2,'0') + (p.caption ? '_' + sanitizeFolderName(p.caption).slice(0,40) : '');
-      folder.file(base + '.' + ext, p.originalBlob || dataUrlToBlob(p.dataUrl));
+      folder.file(base + '.jpg', dataUrlToBlob(p.dataUrl));
     });
   });
   return zip.generateAsync({ type:'blob' });
@@ -887,16 +1166,15 @@ function dataUrlToBlob(dataUrl){
   return new Blob([arr], { type:mime });
 }
 
+function timeSuffix(){
+  const now = new Date();
+  return String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
+}
+
 function zipFilename(){
   const addr = (document.getElementById('propAddress').value || 'piso').replace(/[^a-z0-9]+/gi,'_');
   const date = document.getElementById('propDate').value || 'fecha';
   return `fotos_${addr}_${date}_${timeSuffix()}.zip`;
-}
-
-
-function timeSuffix(){
-  const now = new Date();
-  return String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
 }
 
 function pdfFilename(){
@@ -905,21 +1183,8 @@ function pdfFilename(){
   return `inventario_${addr}_${date}_${timeSuffix()}.pdf`;
 }
 
-
-
-let cachedZipFile = null;
-
-async function prebuildZip(){
-  const totalPhotos = rooms.reduce((n,r)=>n+r.photos.length,0);
-  if(totalPhotos === 0){ cachedZipFile = null; return; }
-  try{
-    const zipBlob = await buildPhotosZip();
-    cachedZipFile = new File([zipBlob], zipFilename(), { type:'application/zip' });
-  }catch(e){ cachedZipFile = null; }
-}
-
 async function buildOutputFiles(){
-  toast('Generando PDF…');
+  toast(t('toast_generating_pdf'));
   const doc = await buildPdf();
   const pdfName = pdfFilename();
   const pdfBlob = doc.output('blob');
@@ -934,20 +1199,7 @@ async function buildOutputFiles(){
   return { doc, pdfName, pdfFile, zipFile };
 }
 
-document.getElementById('downloadBtn').addEventListener('click', async ()=>{
-  const { pdfFile, zipFile } = await buildOutputFiles();
-  downloadFile(pdfFile);
-  if(zipFile){
-    await new Promise(r=>setTimeout(()=>{ downloadFile(zipFile); r(); }, 400));
-    toast('PDF y fotos descargados en tu carpeta de Descargas.');
-  } else {
-    toast('PDF descargado en tu carpeta de Descargas.');
-  }
-});
-
 function downloadFile(file){
-  // Usamos un tipo MIME genérico para el blob de descarga: así el navegador
-  // no intenta abrir el PDF en su propio visor y lo descarga directamente.
   const forceBlob = new Blob([file], { type:'application/octet-stream' });
   const url = URL.createObjectURL(forceBlob);
   const a = document.createElement('a');
@@ -956,6 +1208,23 @@ function downloadFile(file){
   URL.revokeObjectURL(url);
 }
 
+document.getElementById('downloadBtn').addEventListener('click', async ()=>{
+  const { pdfFile, zipFile } = await buildOutputFiles();
+  downloadFile(pdfFile);
+  if(zipFile){
+    await new Promise(r=>setTimeout(()=>{ downloadFile(zipFile); r(); }, 400));
+    toast(t('toast_downloaded_both'));
+  } else {
+    toast(t('toast_downloaded_pdf'));
+  }
+});
+
+// inicializar textos e idioma tras cargar todo lo necesario
+applyStaticTranslations();
+addRoom('salon');
+addRoom('cocina');
+addRoom('bano');
+addRoom('dormitorio', 1);
 </script>
 </body>
 </html>
