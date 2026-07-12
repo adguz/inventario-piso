@@ -242,6 +242,47 @@
     color:rgba(255,255,255,.5); font-family:'IBM Plex Mono',monospace;
     font-size:11px; margin-top:6px; letter-spacing:.05em;
   }
+
+  .modal-overlay{
+    display:none; position:fixed; inset:0; z-index:110;
+    background:rgba(15,18,13,.55);
+    align-items:center; justify-content:center; padding:24px;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-card{
+    background:var(--paper-card); border-radius:var(--radius);
+    border:1px solid var(--line); max-width:400px; width:100%;
+    padding:20px; box-shadow:0 10px 30px rgba(0,0,0,.25);
+  }
+  .modal-title{
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:17px;
+    margin-bottom:14px;
+  }
+  .modal-file-list{
+    list-style:none; margin:0 0 14px; padding:0;
+  }
+  .modal-file-list li{
+    display:flex; align-items:flex-start; gap:8px;
+    font-size:14px; padding:8px 0; border-bottom:1px solid var(--line);
+  }
+  .modal-file-list li:last-child{border-bottom:none;}
+  .modal-file-text{display:flex; flex-direction:column; gap:2px; min-width:0;}
+  .modal-file-name{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600;
+    color:var(--ink); word-break:break-all;
+  }
+  .modal-file-desc{font-size:12px; color:var(--ink-soft);}
+  .modal-file-list .file-icon{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600;
+    background:var(--stamp-bg); color:var(--stamp); border-radius:5px;
+    padding:2px 6px; flex-shrink:0; margin-top:1px;
+  }
+  .modal-location{
+    font-size:12.5px; color:var(--ink-soft); line-height:1.4;
+    background:#F6F7F2; border-radius:7px; padding:10px 12px; margin-bottom:16px;
+  }
+  .modal-actions{display:flex; gap:10px;}
+  .modal-actions .btn{padding:12px 10px;}
 </style>
 </head>
 <body>
@@ -352,6 +393,18 @@
   <div id="lightboxCounter" class="lightbox-counter"></div>
 </div>
 
+<div id="downloadModalOverlay" class="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-title" data-i18n="modal_title">Confirmar descarga</div>
+    <ul class="modal-file-list" id="modalFileList"></ul>
+    <div class="modal-location" id="modalLocation"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="modalCancelBtn" data-i18n="btn_cancel">Cancelar</button>
+      <button class="btn primary" id="modalAcceptBtn" data-i18n="btn_accept">Aceptar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ================= I18N =================
 const I18N = {
@@ -402,9 +455,16 @@ const I18N = {
     no_comment:'Sin comentario',
     btn_back:'← Volver',
     btn_download:'Descargar',
+    modal_title:'Confirmar descarga',
+    modal_file_pdf:'Informe en PDF (resumen del inventario)',
+    modal_file_zip:(n,total)=> total > 1 ? `Carpeta de fotos ZIP — parte ${n} de ${total}` : 'Carpeta de fotos ZIP (fotos originales)',
+    modal_location:'Se guardarán en la carpeta "Descargas" de tu teléfono.',
+    btn_accept:'Aceptar',
+    btn_cancel:'Cancelar',
     toast_generating_pdf:'Generando PDF…',
     toast_downloaded_both:'PDF y fotos descargados en tu carpeta de Descargas.',
     toast_downloaded_pdf:'PDF descargado en tu carpeta de Descargas.',
+    toast_downloaded_parts:(n)=> `PDF y fotos descargados (${n} carpetas ZIP, divididas por tamaño) en tu carpeta de Descargas.`,
     pdf_title:'Inventario fotográfico',
     pdf_property:'Inmueble',
     pdf_address:'Dirección', pdf_no_address:'(sin dirección)',
@@ -466,9 +526,16 @@ const I18N = {
     no_comment:'No comment',
     btn_back:'← Back',
     btn_download:'Download',
+    modal_title:'Confirm download',
+    modal_file_pdf:'PDF report (inventory summary)',
+    modal_file_zip:(n,total)=> total > 1 ? `Photos ZIP folder — part ${n} of ${total}` : 'Photos ZIP folder (original photos)',
+    modal_location:'They\'ll be saved to your phone\'s "Downloads" folder.',
+    btn_accept:'Accept',
+    btn_cancel:'Cancel',
     toast_generating_pdf:'Generating PDF…',
     toast_downloaded_both:'PDF and photos downloaded to your Downloads folder.',
     toast_downloaded_pdf:'PDF downloaded to your Downloads folder.',
+    toast_downloaded_parts:(n)=> `PDF and photos downloaded (${n} ZIP folders, split by size) to your Downloads folder.`,
     pdf_title:'Photo inventory',
     pdf_property:'Property',
     pdf_address:'Address', pdf_no_address:'(no address)',
@@ -1132,29 +1199,72 @@ function sanitizeFolderName(name){
   return (name || 'estancia').trim().replace(/[\\/:*?"<>|]+/g,'_') || 'estancia';
 }
 
-let cachedZipFile = null;
+let cachedZipFiles = null;
+
+function zipPartFilename(index, total){
+  const addr = addressSlug();
+  const date = document.getElementById('propDate').value || 'fecha';
+  const suffix = timeSuffix();
+  const part = total > 1 ? `_parte${index+1}de${total}` : '';
+  return `fotos_${addr}_${date}_${suffix}${part}.zip`;
+}
+
+async function buildZipFiles(){
+  const blobs = await buildPhotosZipParts();
+  return blobs.map((blob, idx) => new File([blob], zipPartFilename(idx, blobs.length), { type:'application/zip' }));
+}
 
 async function prebuildZip(){
   const totalPhotos = rooms.reduce((n,r)=>n+r.photos.length,0);
-  if(totalPhotos === 0){ cachedZipFile = null; return; }
+  if(totalPhotos === 0){ cachedZipFiles = null; return; }
   try{
-    const zipBlob = await buildPhotosZip();
-    cachedZipFile = new File([zipBlob], zipFilename(), { type:'application/zip' });
-  }catch(e){ cachedZipFile = null; }
+    cachedZipFiles = await buildZipFiles();
+  }catch(e){ cachedZipFiles = null; }
 }
 
-async function buildPhotosZip(){
-  const zip = new JSZip();
+const ZIP_TARGET_BYTES = 20 * 1024 * 1024; // ~20MB, límite seguro para la mayoría de proveedores de email
+
+// Devuelve un array de blobs ZIP. Si todo cabe en un único ZIP por debajo del
+// límite, el array tiene un solo elemento. Si no, se reparte en varias partes,
+// cada una por debajo del límite, sin tocar la calidad de las fotos.
+async function buildPhotosZipParts(){
+  // 1. reunir todas las fotos con su ruta de carpeta y tamaño real
+  const entries = [];
   rooms.forEach(room=>{
     if(room.photos.length === 0) return;
     const folderName = String(room.id).padStart(2,'0') + '_' + sanitizeFolderName(room.name);
-    const folder = zip.folder(folderName);
     room.photos.forEach((p, idx)=>{
       const base = String(idx+1).padStart(2,'0') + (p.caption ? '_' + sanitizeFolderName(p.caption).slice(0,40) : '');
-      folder.file(base + '.jpg', dataUrlToBlob(p.dataUrl));
+      const blob = dataUrlToBlob(p.dataUrl);
+      entries.push({ path: folderName + '/' + base + '.jpg', blob, size: blob.size });
     });
   });
-  return zip.generateAsync({ type:'blob' });
+  if(entries.length === 0) return [];
+
+  // 2. repartir en grupos que quepan bajo el límite (con margen para la cabecera del zip)
+  const safeTarget = ZIP_TARGET_BYTES * 0.95;
+  const groups = [];
+  let current = [];
+  let currentSize = 0;
+  entries.forEach(entry=>{
+    if(current.length > 0 && currentSize + entry.size > safeTarget){
+      groups.push(current);
+      current = [];
+      currentSize = 0;
+    }
+    current.push(entry);
+    currentSize += entry.size;
+  });
+  if(current.length) groups.push(current);
+
+  // 3. generar un ZIP por grupo
+  const blobs = [];
+  for(const group of groups){
+    const zip = new JSZip();
+    group.forEach(entry => zip.file(entry.path, entry.blob));
+    blobs.push(await zip.generateAsync({ type:'blob' }));
+  }
+  return blobs;
 }
 
 function dataUrlToBlob(dataUrl){
@@ -1166,19 +1276,19 @@ function dataUrlToBlob(dataUrl){
   return new Blob([arr], { type:mime });
 }
 
+function addressSlug(){
+  const raw = document.getElementById('propAddress').value || 'piso';
+  const slug = raw.replace(/[^a-z0-9]+/gi,'_').replace(/^_+|_+$/g,'');
+  return (slug || 'piso').slice(0, 40);
+}
+
 function timeSuffix(){
   const now = new Date();
   return String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
 }
 
-function zipFilename(){
-  const addr = (document.getElementById('propAddress').value || 'piso').replace(/[^a-z0-9]+/gi,'_');
-  const date = document.getElementById('propDate').value || 'fecha';
-  return `fotos_${addr}_${date}_${timeSuffix()}.zip`;
-}
-
 function pdfFilename(){
-  const addr = (document.getElementById('propAddress').value || 'piso').replace(/[^a-z0-9]+/gi,'_');
+  const addr = addressSlug();
   const date = document.getElementById('propDate').value || 'fecha';
   return `inventario_${addr}_${date}_${timeSuffix()}.pdf`;
 }
@@ -1191,12 +1301,11 @@ async function buildOutputFiles(){
   const pdfFile = new File([pdfBlob], pdfName, { type:'application/pdf' });
 
   const totalPhotos = rooms.reduce((n,r)=>n+r.photos.length,0);
-  let zipFile = cachedZipFile;
-  if(!zipFile && totalPhotos > 0){
-    const zipBlob = await buildPhotosZip();
-    zipFile = new File([zipBlob], zipFilename(), { type:'application/zip' });
+  let zipFiles = cachedZipFiles;
+  if(!zipFiles && totalPhotos > 0){
+    zipFiles = await buildZipFiles();
   }
-  return { doc, pdfName, pdfFile, zipFile };
+  return { doc, pdfName, pdfFile, zipFiles: zipFiles || [] };
 }
 
 function downloadFile(file){
@@ -1208,15 +1317,57 @@ function downloadFile(file){
   URL.revokeObjectURL(url);
 }
 
+let pendingDownload = null;
+
 document.getElementById('downloadBtn').addEventListener('click', async ()=>{
-  const { pdfFile, zipFile } = await buildOutputFiles();
+  const { pdfFile, zipFiles } = await buildOutputFiles();
+  pendingDownload = { pdfFile, zipFiles };
+  showDownloadModal(pdfFile, zipFiles);
+});
+
+function showDownloadModal(pdfFile, zipFiles){
+  const list = document.getElementById('modalFileList');
+  list.innerHTML = '';
+
+  const pdfLi = document.createElement('li');
+  pdfLi.innerHTML = `<span class="file-icon">PDF</span><span class="modal-file-text"><span class="modal-file-name">${escapeHtml(pdfFile.name)}</span><span class="modal-file-desc">${t('modal_file_pdf')}</span></span>`;
+  list.appendChild(pdfLi);
+
+  zipFiles.forEach((f, idx)=>{
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="file-icon">ZIP</span><span class="modal-file-text"><span class="modal-file-name">${escapeHtml(f.name)}</span><span class="modal-file-desc">${tr('modal_file_zip', idx+1, zipFiles.length)}</span></span>`;
+    list.appendChild(li);
+  });
+
+  document.getElementById('modalLocation').textContent = t('modal_location');
+  document.getElementById('downloadModalOverlay').classList.add('open');
+}
+function closeDownloadModal(){
+  document.getElementById('downloadModalOverlay').classList.remove('open');
+}
+document.getElementById('modalCancelBtn').addEventListener('click', ()=>{
+  pendingDownload = null;
+  closeDownloadModal();
+});
+document.getElementById('downloadModalOverlay').addEventListener('click', e=>{
+  if(e.target.id === 'downloadModalOverlay'){ pendingDownload = null; closeDownloadModal(); }
+});
+document.getElementById('modalAcceptBtn').addEventListener('click', async ()=>{
+  if(!pendingDownload) return;
+  const { pdfFile, zipFiles } = pendingDownload;
+  closeDownloadModal();
   downloadFile(pdfFile);
-  if(zipFile){
-    await new Promise(r=>setTimeout(()=>{ downloadFile(zipFile); r(); }, 400));
+  for(let i=0; i<zipFiles.length; i++){
+    await new Promise(r=>setTimeout(()=>{ downloadFile(zipFiles[i]); r(); }, 400));
+  }
+  if(zipFiles.length > 1){
+    toast(t('toast_downloaded_parts')(zipFiles.length));
+  } else if(zipFiles.length === 1){
     toast(t('toast_downloaded_both'));
   } else {
     toast(t('toast_downloaded_pdf'));
   }
+  pendingDownload = null;
 });
 
 // inicializar textos e idioma tras cargar todo lo necesario
