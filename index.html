@@ -459,6 +459,11 @@ const I18N = {
     modal_file_pdf:'Informe en PDF (resumen del inventario)',
     modal_file_zip:(n,total)=> total > 1 ? `Carpeta de fotos ZIP — parte ${n} de ${total}` : 'Carpeta de fotos ZIP (fotos originales)',
     modal_location:'Se guardarán en la carpeta "Descargas" de tu teléfono.',
+    file_prefix_pdf:'inventario',
+    file_prefix_zip:'fotos',
+    file_fallback_address:'piso',
+    file_fallback_date:'fecha',
+    file_part:(n,total)=> `_parte${n}de${total}`,
     btn_accept:'Aceptar',
     btn_cancel:'Cancelar',
     toast_generating_pdf:'Generando PDF…',
@@ -530,6 +535,11 @@ const I18N = {
     modal_file_pdf:'PDF report (inventory summary)',
     modal_file_zip:(n,total)=> total > 1 ? `Photos ZIP folder — part ${n} of ${total}` : 'Photos ZIP folder (original photos)',
     modal_location:'They\'ll be saved to your phone\'s "Downloads" folder.',
+    file_prefix_pdf:'inventory',
+    file_prefix_zip:'photos',
+    file_fallback_address:'property',
+    file_fallback_date:'date',
+    file_part:(n,total)=> `_part${n}of${total}`,
     btn_accept:'Accept',
     btn_cancel:'Cancel',
     toast_generating_pdf:'Generating PDF…',
@@ -592,6 +602,10 @@ function setLang(newLang){
   renderTenants();
   renderOwners();
   if(inReview) renderReview();
+  // invalidar archivos ya generados en el idioma anterior, para que se
+  // regeneren con los nombres traducidos correctamente la próxima vez
+  cachedZipFiles = null;
+  pendingDownload = null;
 }
 document.getElementById('langEs').addEventListener('click', ()=> setLang('es'));
 document.getElementById('langEn').addEventListener('click', ()=> setLang('en'));
@@ -1203,10 +1217,10 @@ let cachedZipFiles = null;
 
 function zipPartFilename(index, total){
   const addr = addressSlug();
-  const date = document.getElementById('propDate').value || 'fecha';
+  const date = document.getElementById('propDate').value || t('file_fallback_date');
   const suffix = timeSuffix();
-  const part = total > 1 ? `_parte${index+1}de${total}` : '';
-  return `fotos_${addr}_${date}_${suffix}${part}.zip`;
+  const part = total > 1 ? t('file_part')(index+1, total) : '';
+  return `${t('file_prefix_zip')}_${addr}_${date}_${suffix}${part}.zip`;
 }
 
 async function buildZipFiles(){
@@ -1277,9 +1291,9 @@ function dataUrlToBlob(dataUrl){
 }
 
 function addressSlug(){
-  const raw = document.getElementById('propAddress').value || 'piso';
+  const raw = document.getElementById('propAddress').value || t('file_fallback_address');
   const slug = raw.replace(/[^a-z0-9]+/gi,'_').replace(/^_+|_+$/g,'');
-  return (slug || 'piso').slice(0, 40);
+  return (slug || t('file_fallback_address')).slice(0, 40);
 }
 
 function timeSuffix(){
@@ -1289,8 +1303,8 @@ function timeSuffix(){
 
 function pdfFilename(){
   const addr = addressSlug();
-  const date = document.getElementById('propDate').value || 'fecha';
-  return `inventario_${addr}_${date}_${timeSuffix()}.pdf`;
+  const date = document.getElementById('propDate').value || t('file_fallback_date');
+  return `${t('file_prefix_pdf')}_${addr}_${date}_${timeSuffix()}.pdf`;
 }
 
 async function buildOutputFiles(){
