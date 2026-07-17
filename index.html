@@ -415,6 +415,17 @@
   <div id="lightboxCounter" class="lightbox-counter"></div>
 </div>
 
+<div id="resumeModalOverlay" class="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-title" data-i18n="resume_title">Se encontró un inventario sin terminar</div>
+    <div class="modal-location" data-i18n="resume_text">Parece que la app se cerró antes de terminar (por ejemplo, al recibir una llamada). Puedes continuar donde lo dejaste — las firmas habrá que rehacerlas — o empezar uno nuevo.</div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="resumeDiscardBtn" data-i18n="btn_discard">Empezar de nuevo</button>
+      <button class="btn primary" id="resumeContinueBtn" data-i18n="btn_resume">Continuar</button>
+    </div>
+  </div>
+</div>
+
 <div id="downloadModalOverlay" class="modal-overlay">
   <div class="modal-card">
     <div class="modal-title" data-i18n="modal_title">Confirmar descarga</div>
@@ -501,6 +512,10 @@ const I18N = {
     landing_inventory_desc:'Fotos por estancia, comentarios, firma y PDF resumen.',
     landing_inventory_btn:'Empezar inventario →',
     btn_back_start:'← Inicio',
+    resume_title:'Se encontró un inventario sin terminar',
+    resume_text:'Parece que la app se cerró antes de terminar (por ejemplo, al recibir una llamada). Puedes continuar donde lo dejaste — las firmas habrá que rehacerlas — o empezar uno nuevo.',
+    btn_discard:'Empezar de nuevo',
+    btn_resume:'Continuar',
     toast_generating_pdf:'Generando PDF…',
     toast_downloaded_both:'PDF y fotos descargados en tu carpeta de Descargas.',
     toast_downloaded_pdf:'PDF descargado en tu carpeta de Descargas.',
@@ -590,6 +605,10 @@ const I18N = {
     landing_inventory_desc:'Room-by-room photos, comments, signature and PDF summary.',
     landing_inventory_btn:'Start inventory →',
     btn_back_start:'← Home',
+    resume_title:'An unfinished inventory was found',
+    resume_text:"It looks like the app closed before you finished (for example, during a phone call). You can continue where you left off — signatures will need to be redone — or start a new one.",
+    btn_discard:'Start new',
+    btn_resume:'Continue',
     toast_generating_pdf:'Generating PDF…',
     toast_downloaded_both:'PDF and photos downloaded to your Downloads folder.',
     toast_downloaded_pdf:'PDF downloaded to your Downloads folder.',
@@ -654,17 +673,190 @@ function setLang(newLang){
   // regeneren con los nombres traducidos correctamente la próxima vez
   cachedZipFiles = null;
   pendingDownload = null;
+  scheduleAutosave();
 }
 document.getElementById('langEs').addEventListener('click', ()=> setLang('es'));
 document.getElementById('langEn').addEventListener('click', ()=> setLang('en'));
 
-// ---------- state (in-memory only) ----------
+// ---------- state (in-memory only, con autoguardado en IndexedDB) ----------
 let rooms = [];
 let roomCounter = 0;
 let tenants = [];
 let tenantCounter = 0;
 let owners = [];
 let ownerCounter = 0;
+
+// ================= AUTOGUARDADO (IndexedDB) =================
+// Guarda el progreso en el propio dispositivo para poder recuperarlo si el
+// navegador cierra la pestaña en segundo plano (ej. al recibir una llamada).
+const DB_NAME = 'inventario_piso_db';
+const STORE_NAME = 'state';
+const RECORD_KEY = 'session';
+
+function openDB(){
+  return new Promise((resolve, reject)=>{
+    if(!window.indexedDB){ reject(new Error('IndexedDB no soportado')); return; }
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = ()=>{ req.result.createObjectStore(STORE_NAME); };
+    req.onsuccess = ()=> resolve(req.result);
+    req.onerror = ()=> reject(req.error);
+  });
+}
+
+async function saveState(state){
+  try{
+    const db = await openDB();
+    await new Promise((resolve, reject)=>{
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      tx.objectStore(STORE_NAME).put(state, RECORD_KEY);
+      tx.oncomplete = resolve;
+      tx.onerror = ()=> reject(tx.error);
+    });
+  }catch(e){ /* almacenamiento no disponible: continuar sin autoguardado */ }
+}
+
+async function loadState(){
+  try{
+    const db = await openDB();
+    return await new Promise((resolve, reject)=>{
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const req = tx.objectStore(STORE_NAME).get(RECORD_KEY);
+      req.onsuccess = ()=> resolve(req.result || null);
+      req.onerror = ()=> reject(req.error);
+    });
+  }catch(e){ return null; }
+}
+
+async function clearState(){
+  try{
+    const db = await openDB();
+    await new Promise((resolve, reject)=>{
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      tx.objectStore(STORE_NAME).delete(RECORD_KEY);
+      tx.oncomplete = resolve;
+      tx.onerror = ()=> reject(tx.error);
+    });
+  }catch(e){ /* ignorar */ }
+}
+
+function currentStepName(){
+  if(document.getElementById('stepReview').style.display === 'block') return 'review';
+  if(document.getElementById('stepFill').style.display === 'block') return 'fill';
+  return 'landing';
+}
+
+function collectState(){
+  return {
+    lang,
+    currentStep: currentStepName(),
+    roomCounter, tenantCounter, ownerCounter,
+    propAddress: document.getElementById('propAddress').value,
+    propDate: document.getElementById('propDate').value,
+    propRef: document.getElementById('propRef').value,
+    propReason: document.getElementById('propReason').value,
+    extraEmails: document.getElementById('extraEmails').value,
+    owners: owners.map(o=>({ id:o.id, name:o.name, docId:o.docId, email:o.email, phone:o.phone })),
+    tenants: tenants.map(tn=>({ id:tn.id, name:tn.name, docId:tn.docId, email:tn.email, phone:tn.phone })),
+    rooms: rooms.map(r=>({
+      id:r.id, kind:r.kind, num:r.num, autoName:r.autoName, name:r.name,
+      photos:r.photos.map(p=>({ dataUrl:p.dataUrl, width:p.width, height:p.height, caption:p.caption }))
+    }))
+  };
+}
+
+let autosaveTimer = null;
+function scheduleAutosave(){
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(()=>{ saveState(collectState()); }, 600);
+}
+
+async function restoreState(state){
+  lang = state.lang || 'es';
+  document.getElementById('langEs').classList.toggle('active', lang==='es');
+  document.getElementById('langEn').classList.toggle('active', lang==='en');
+  applyStaticTranslations();
+
+  document.getElementById('propAddress').value = state.propAddress || '';
+  document.getElementById('propDate').value = state.propDate || '';
+  document.getElementById('propRef').value = state.propRef || '';
+  if(state.propReason) document.getElementById('propReason').value = state.propReason;
+  document.getElementById('extraEmails').value = state.extraEmails || '';
+
+  roomCounter = state.roomCounter || 0;
+  tenantCounter = state.tenantCounter || 0;
+  ownerCounter = state.ownerCounter || 0;
+
+  owners = (state.owners || []).map(o=>({ ...o }));
+  tenants = (state.tenants || []).map(tn=>({ ...tn, canvasEl:null, ctx:null, sigEmpty:true }));
+  rooms = (state.rooms || []).map(r=>({ ...r, photos:(r.photos||[]).map(p=>({ ...p })) }));
+
+  renderOwners();
+  renderTenants();
+  renderRooms();
+
+  document.getElementById('landingScreen').style.display = 'none';
+  document.getElementById('stepFill').style.display = 'none';
+  document.getElementById('stepReview').style.display = 'none';
+  document.getElementById('footerFill').style.display = 'none';
+  document.getElementById('footerReview').style.display = 'none';
+  document.getElementById('stepIndicator').style.display = 'none';
+  document.getElementById('backToLandingBtn').style.display = 'none';
+
+  if(state.currentStep === 'review'){
+    document.getElementById('stepReview').style.display = 'block';
+    document.getElementById('footerReview').style.display = 'flex';
+    document.getElementById('stepIndicator').style.display = 'block';
+    document.getElementById('backToLandingBtn').style.display = 'inline-block';
+    document.getElementById('stepIndicatorText').innerHTML = '<b>' + t('step2_bold') + '</b> ' + t('step2_rest');
+    renderReview();
+    prebuildZip();
+  } else if(state.currentStep === 'fill'){
+    document.getElementById('stepFill').style.display = 'block';
+    document.getElementById('footerFill').style.display = 'flex';
+    document.getElementById('stepIndicator').style.display = 'block';
+    document.getElementById('backToLandingBtn').style.display = 'inline-block';
+    document.getElementById('stepIndicatorText').innerHTML = '<b>' + t('step1_bold') + '</b> ' + t('step1_rest');
+  } else {
+    document.getElementById('landingScreen').style.display = 'block';
+  }
+}
+
+function seedDefaults(){
+  addTenant();
+  addOwner();
+  addRoom('salon');
+  addRoom('cocina');
+  addRoom('bano');
+  addRoom('dormitorio', 1);
+}
+
+async function initApp(){
+  applyStaticTranslations();
+  const saved = await loadState();
+  const hasContent = saved && (
+    (saved.rooms && saved.rooms.some(r=>r.photos && r.photos.length)) ||
+    (saved.propAddress && saved.propAddress.trim()) ||
+    saved.currentStep === 'fill' || saved.currentStep === 'review'
+  );
+  if(hasContent){
+    document.getElementById('resumeModalOverlay').classList.add('open');
+    document.getElementById('resumeContinueBtn').addEventListener('click', async ()=>{
+      document.getElementById('resumeModalOverlay').classList.remove('open');
+      await restoreState(saved);
+    }, { once:true });
+    document.getElementById('resumeDiscardBtn').addEventListener('click', async ()=>{
+      document.getElementById('resumeModalOverlay').classList.remove('open');
+      await clearState();
+      seedDefaults();
+    }, { once:true });
+  } else {
+    seedDefaults();
+  }
+}
+
+// autoguardado ante cualquier cambio de texto/selección en el formulario
+document.addEventListener('input', scheduleAutosave);
+document.addEventListener('change', scheduleAutosave);
 
 // ================= ROOMS =================
 function computeRoomName(kind, num){
@@ -679,6 +871,7 @@ function addRoom(kind, numOverride){
   const num = numOverride || roomCounter;
   rooms.push({ id: roomCounter, kind: useKind, num, autoName:true, name: computeRoomName(useKind, num), photos: [] });
   renderRooms();
+  scheduleAutosave();
 }
 
 function renderRooms(){
@@ -727,6 +920,7 @@ function renderRooms(){
     btn.addEventListener('click', e=>{
       rooms = rooms.filter(x=>x.id != e.target.dataset.remove);
       renderRooms();
+      scheduleAutosave();
     });
   });
   list.querySelectorAll('[data-addphoto]').forEach(btn=>{
@@ -743,6 +937,7 @@ function renderRooms(){
         room.photos.push({ dataUrl: img.dataUrl, width: img.width, height: img.height, caption:'', originalName: file.name });
       }
       renderRooms();
+      scheduleAutosave();
     });
   });
   list.querySelectorAll('[data-delphoto]').forEach(btn=>{
@@ -751,6 +946,7 @@ function renderRooms(){
       const room = rooms.find(x=>x.id == roomId);
       room.photos.splice(idx,1);
       renderRooms();
+      scheduleAutosave();
     });
   });
   list.querySelectorAll('[data-capinput]').forEach(inp=>{
@@ -770,6 +966,7 @@ function addTenant(){
     canvasEl:null, ctx:null, sigEmpty:true
   });
   renderTenants();
+  scheduleAutosave();
 }
 
 function renderTenants(){
@@ -821,6 +1018,7 @@ function renderTenants(){
     btn.addEventListener('click', e=>{
       tenants = tenants.filter(tn=>tn.id != e.target.dataset.removetenant);
       renderTenants();
+      scheduleAutosave();
     });
   });
 }
@@ -830,6 +1028,7 @@ function addOwner(){
   ownerCounter++;
   owners.push({ id: ownerCounter, name:'', docId:'', email:'', phone:'' });
   renderOwners();
+  scheduleAutosave();
 }
 
 function renderOwners(){
@@ -881,6 +1080,7 @@ function renderOwners(){
     btn.addEventListener('click', e=>{
       owners = owners.filter(ow=>ow.id != e.target.dataset.removeowner);
       renderOwners();
+      scheduleAutosave();
     });
   });
 }
@@ -1042,6 +1242,7 @@ function goToReview(){
   renderReview();
   prebuildZip();
   window.scrollTo(0,0);
+  scheduleAutosave();
 }
 function goToFill(){
   document.getElementById('stepFill').style.display = 'block';
@@ -1050,6 +1251,7 @@ function goToFill(){
   document.getElementById('footerReview').style.display = 'none';
   document.getElementById('stepIndicatorText').innerHTML = '<b>' + t('step1_bold') + '</b> ' + t('step1_rest');
   window.scrollTo(0,0);
+  scheduleAutosave();
 }
 
 // ================= helpers =================
@@ -1128,6 +1330,7 @@ document.getElementById('landingInventoryBtn').addEventListener('click', ()=>{
   document.getElementById('backToLandingBtn').style.display = 'inline-block';
   document.getElementById('footerFill').style.display = 'flex';
   window.scrollTo(0,0);
+  scheduleAutosave();
 });
 document.getElementById('backToLandingBtn').addEventListener('click', ()=>{
   document.getElementById('stepFill').style.display = 'none';
@@ -1138,6 +1341,7 @@ document.getElementById('backToLandingBtn').addEventListener('click', ()=>{
   document.getElementById('backToLandingBtn').style.display = 'none';
   document.getElementById('landingScreen').style.display = 'block';
   window.scrollTo(0,0);
+  scheduleAutosave();
 });
 
 document.getElementById('addRoomBtn').addEventListener('click', ()=> addRoom());
@@ -1146,9 +1350,7 @@ document.getElementById('addOwnerBtn').addEventListener('click', ()=> addOwner()
 document.getElementById('goReviewBtn').addEventListener('click', goToReview);
 document.getElementById('backToFillBtn').addEventListener('click', goToFill);
 
-// seed
-addTenant();
-addOwner();
+// (la siembra inicial se gestiona más abajo, tras comprobar si hay una sesión guardada)
 
 // ---------- toast ----------
 function toast(msg, ms=2600){
@@ -1451,12 +1653,8 @@ document.getElementById('modalAcceptBtn').addEventListener('click', async ()=>{
   pendingDownload = null;
 });
 
-// inicializar textos e idioma tras cargar todo lo necesario
-applyStaticTranslations();
-addRoom('salon');
-addRoom('cocina');
-addRoom('bano');
-addRoom('dormitorio', 1);
+// inicializar la app: recuperar sesión guardada o sembrar valores por defecto
+initApp();
 </script>
 </body>
 </html>
