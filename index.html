@@ -298,12 +298,34 @@
       <button id="langEn" type="button">EN</button>
     </div>
   </div>
-  <div class="step-indicator" id="stepIndicator"><b data-i18n="step1_bold">Paso 1 de 2</b> <span data-i18n="step1_rest"> · Rellenar datos y fotos</span></div>
+  <div class="step-indicator" id="stepIndicator" style="display:none;">
+    <span id="stepIndicatorText"><b data-i18n="step1_bold">Paso 1 de 2</b> <span data-i18n="step1_rest"> · Rellenar datos y fotos</span></span>
+  </div>
+  <button id="backToLandingBtn" class="link-btn" style="display:none; margin-top:2px;" data-i18n="btn_back_start">← Inicio</button>
 </header>
 
 <main>
 
-  <div id="stepFill">
+  <div id="landingScreen">
+    <section class="card" style="text-align:center;">
+      <div class="card-title" style="font-size:17px; margin-bottom:4px;" data-i18n="landing_title">¿Qué necesitas hacer?</div>
+      <div class="hint" style="margin-bottom:18px;" data-i18n="landing_subtitle">Elige una opción para empezar.</div>
+
+      <div style="border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:14px; text-align:left;">
+        <div style="font-weight:600; font-size:14.5px; margin-bottom:4px;" data-i18n="landing_inventory_title">Hacer el inventario fotográfico</div>
+        <div class="hint" style="margin-bottom:12px;" data-i18n="landing_inventory_desc">Fotos por estancia, comentarios, firma y PDF resumen.</div>
+        <button id="landingInventoryBtn" class="btn primary" style="width:100%;" data-i18n="landing_inventory_btn">Empezar inventario →</button>
+      </div>
+
+      <div style="border:1px solid var(--line); border-radius:10px; padding:16px; text-align:left;">
+        <div style="font-weight:600; font-size:14.5px; margin-bottom:4px;" data-i18n="landing_contract_title">Obtener un contrato de alquiler</div>
+        <div class="hint" style="margin-bottom:12px;" data-i18n="landing_contract_desc">Modelos gratuitos de Idealista (PDF/Word) para vivienda, temporal, habitaciones, etc.</div>
+        <a id="landingContractBtn" href="https://www.idealista.com/contratos-de-alquiler/modelos-contratos-alquiler" target="_blank" rel="noopener" class="btn secondary" style="text-decoration:none; display:flex; align-items:center; justify-content:center;" data-i18n="landing_contract_btn">Ver modelos de contrato</a>
+      </div>
+    </section>
+  </div>
+
+  <div id="stepFill" style="display:none;">
 
     <section class="card">
       <div class="card-head"><span class="card-title" data-i18n="sec_property">01 · Datos del inmueble</span></div>
@@ -374,7 +396,7 @@
 
 </main>
 
-<footer class="actions" id="footerFill">
+<footer class="actions" id="footerFill" style="display:none;">
   <button class="btn primary" id="goReviewBtn" data-i18n="btn_go_review">Revisar fotos y firmar →</button>
 </footer>
 
@@ -466,6 +488,19 @@ const I18N = {
     file_part:(n,total)=> `_parte${n}de${total}`,
     btn_accept:'Aceptar',
     btn_cancel:'Cancelar',
+    contract_title:'¿Necesitas un contrato de alquiler?',
+    contract_text:'Idealista ofrece modelos gratuitos de contrato de alquiler (vivienda, temporal, habitaciones, con opción a compra...) listos para descargar en PDF o Word.',
+    btn_no_thanks:'No, gracias',
+    btn_view_templates:'Ver modelos',
+    landing_title:'¿Qué necesitas hacer?',
+    landing_subtitle:'Elige una opción para empezar.',
+    landing_contract_title:'Obtener un contrato de alquiler',
+    landing_contract_desc:'Modelos gratuitos de Idealista (PDF/Word) para vivienda, temporal, habitaciones, etc.',
+    landing_contract_btn:'Ver modelos de contrato',
+    landing_inventory_title:'Hacer el inventario fotográfico',
+    landing_inventory_desc:'Fotos por estancia, comentarios, firma y PDF resumen.',
+    landing_inventory_btn:'Empezar inventario →',
+    btn_back_start:'← Inicio',
     toast_generating_pdf:'Generando PDF…',
     toast_downloaded_both:'PDF y fotos descargados en tu carpeta de Descargas.',
     toast_downloaded_pdf:'PDF descargado en tu carpeta de Descargas.',
@@ -542,6 +577,19 @@ const I18N = {
     file_part:(n,total)=> `_part${n}of${total}`,
     btn_accept:'Accept',
     btn_cancel:'Cancel',
+    contract_title:'Need a rental contract?',
+    contract_text:'Idealista offers free rental contract templates (standard, short-term, room rental, rent-to-own...) ready to download in PDF or Word (Spanish site).',
+    btn_no_thanks:'No, thanks',
+    btn_view_templates:'View templates',
+    landing_title:'What do you need to do?',
+    landing_subtitle:'Choose an option to get started.',
+    landing_contract_title:'Get a rental contract',
+    landing_contract_desc:'Free templates from Idealista (PDF/Word) for standard, short-term, room rental, etc. (Spanish site)',
+    landing_contract_btn:'View contract templates',
+    landing_inventory_title:'Do the photo inventory',
+    landing_inventory_desc:'Room-by-room photos, comments, signature and PDF summary.',
+    landing_inventory_btn:'Start inventory →',
+    btn_back_start:'← Home',
     toast_generating_pdf:'Generating PDF…',
     toast_downloaded_both:'PDF and photos downloaded to your Downloads folder.',
     toast_downloaded_pdf:'PDF downloaded to your Downloads folder.',
@@ -591,7 +639,7 @@ function setLang(newLang){
   applyStaticTranslations();
   // actualizar indicador de paso según la vista actual
   const inReview = document.getElementById('stepReview').style.display === 'block';
-  document.getElementById('stepIndicator').innerHTML = inReview
+  document.getElementById('stepIndicatorText').innerHTML = inReview
     ? '<b>' + t('step2_bold') + '</b> ' + t('step2_rest')
     : '<b>' + t('step1_bold') + '</b> ' + t('step1_rest');
   // retraducir nombres de estancia que no hayan sido renombrados a mano
@@ -990,7 +1038,7 @@ function goToReview(){
   document.getElementById('stepReview').style.display = 'block';
   document.getElementById('footerFill').style.display = 'none';
   document.getElementById('footerReview').style.display = 'flex';
-  document.getElementById('stepIndicator').innerHTML = '<b>' + t('step2_bold') + '</b> ' + t('step2_rest');
+  document.getElementById('stepIndicatorText').innerHTML = '<b>' + t('step2_bold') + '</b> ' + t('step2_rest');
   renderReview();
   prebuildZip();
   window.scrollTo(0,0);
@@ -1000,7 +1048,7 @@ function goToFill(){
   document.getElementById('stepReview').style.display = 'none';
   document.getElementById('footerFill').style.display = 'flex';
   document.getElementById('footerReview').style.display = 'none';
-  document.getElementById('stepIndicator').innerHTML = '<b>' + t('step1_bold') + '</b> ' + t('step1_rest');
+  document.getElementById('stepIndicatorText').innerHTML = '<b>' + t('step1_bold') + '</b> ' + t('step1_rest');
   window.scrollTo(0,0);
 }
 
@@ -1072,6 +1120,25 @@ async function fileToDataUrl(file){
     return { dataUrl, width:null, height:null };
   }
 }
+
+document.getElementById('landingInventoryBtn').addEventListener('click', ()=>{
+  document.getElementById('landingScreen').style.display = 'none';
+  document.getElementById('stepFill').style.display = 'block';
+  document.getElementById('stepIndicator').style.display = 'block';
+  document.getElementById('backToLandingBtn').style.display = 'inline-block';
+  document.getElementById('footerFill').style.display = 'flex';
+  window.scrollTo(0,0);
+});
+document.getElementById('backToLandingBtn').addEventListener('click', ()=>{
+  document.getElementById('stepFill').style.display = 'none';
+  document.getElementById('stepReview').style.display = 'none';
+  document.getElementById('footerFill').style.display = 'none';
+  document.getElementById('footerReview').style.display = 'none';
+  document.getElementById('stepIndicator').style.display = 'none';
+  document.getElementById('backToLandingBtn').style.display = 'none';
+  document.getElementById('landingScreen').style.display = 'block';
+  window.scrollTo(0,0);
+});
 
 document.getElementById('addRoomBtn').addEventListener('click', ()=> addRoom());
 document.getElementById('addTenantBtn').addEventListener('click', ()=> addTenant());
