@@ -120,7 +120,10 @@
     border-radius:7px; overflow:hidden;
     border:1px solid var(--line); background:#F1F1EC;
   }
-  .photo-tile .thumb-wrap{position:relative; aspect-ratio:4/3; cursor:zoom-in;}
+  .photo-tile .thumb-wrap{position:relative; aspect-ratio:4/3; cursor:zoom-in; touch-action:none;}
+  .photo-tile .thumb-wrap img{
+    -webkit-touch-callout:none; -webkit-user-select:none; user-select:none;
+  }
   .photo-tile img{width:100%; height:100%; object-fit:cover; display:block;}
   .photo-tile button.del{
     position:absolute; top:3px; right:3px; width:20px; height:20px;
@@ -283,6 +286,22 @@
   }
   .modal-actions{display:flex; gap:10px;}
   .modal-actions .btn{padding:12px 10px;}
+
+  .room.drop-target{
+    outline:2px dashed var(--flag); outline-offset:-2px; background:#FBF0EC;
+  }
+  .photo-tile .thumb-wrap.dragging{opacity:.35;}
+  .drag-ghost{
+    position:fixed; z-index:200; pointer-events:none;
+    border-radius:7px; overflow:hidden; box-shadow:0 8px 20px rgba(0,0,0,.35);
+    border:2px solid #fff; opacity:.9; transform:translate(-50%,-50%) scale(1.05);
+  }
+  .drag-ghost img{width:100%; height:100%; object-fit:cover; display:block;}
+  .drag-hint{
+    position:fixed; bottom:100px; left:50%; transform:translateX(-50%);
+    background:var(--ink); color:#fff; padding:8px 14px; border-radius:8px;
+    font-size:12.5px; z-index:200; pointer-events:none; white-space:nowrap;
+  }
 </style>
 </head>
 <body>
@@ -374,6 +393,8 @@
       <div class="card-head"><span class="card-title" data-i18n="sec_rooms">05 · Estancias y fotos</span></div>
       <div id="roomsList"></div>
       <button class="add-room-btn" id="addRoomBtn" data-i18n="btn_add_room">+ Añadir estancia</button>
+      <button class="add-room-btn" id="importZipBtn" style="margin-top:8px;" data-i18n="btn_import_zip">📂 Cargar fotos desde ZIP</button>
+      <input type="file" accept=".zip" multiple id="importZipInput" style="display:none;">
     </section>
 
   </div>
@@ -470,6 +491,12 @@ const I18N = {
     ph_extra:'gestor@correo.com, abogado@correo.com',
     sec_rooms:'05 · Estancias y fotos',
     btn_add_room:'+ Añadir estancia',
+    btn_import_zip:'📂 Cargar fotos desde ZIP',
+    toast_importing_zip:'Leyendo carpeta(s) ZIP…',
+    toast_import_done:(n,rooms)=> `Importadas ${n} foto(s) en ${rooms} estancia(s).`,
+    toast_import_error:'No se pudo leer alguno de los archivos ZIP seleccionados.',
+    drag_hint:'Suelta sobre otra estancia para mover la foto',
+    toast_photo_moved:(roomName)=> `Foto movida a "${roomName}"`,
     room_default:'Estancia',
     room_salon:'Salón', room_cocina:'Cocina', room_bano:'Baño', room_dormitorio:'Dormitorio',
     stamp_photos_n:(n)=> n + (n===1 ? ' FOTO' : ' FOTOS'),
@@ -563,6 +590,12 @@ const I18N = {
     ph_extra:'manager@email.com, lawyer@email.com',
     sec_rooms:'05 · Rooms and photos',
     btn_add_room:'+ Add room',
+    btn_import_zip:'📂 Load photos from ZIP',
+    toast_importing_zip:'Reading ZIP folder(s)…',
+    toast_import_done:(n,rooms)=> `Imported ${n} photo(s) into ${rooms} room(s).`,
+    toast_import_error:'Could not read one of the selected ZIP files.',
+    drag_hint:'Drop on another room to move the photo',
+    toast_photo_moved:(roomName)=> `Photo moved to "${roomName}"`,
     room_default:'Room',
     room_salon:'Living room', room_cocina:'Kitchen', room_bano:'Bathroom', room_dormitorio:'Bedroom',
     stamp_photos_n:(n)=> n + (n===1 ? ' PHOTO' : ' PHOTOS'),
@@ -877,9 +910,11 @@ function addRoom(kind, numOverride){
 function renderRooms(){
   const list = document.getElementById('roomsList');
   list.innerHTML = '';
+  fillPhotoList = [];
   rooms.forEach(room => {
     const el = document.createElement('div');
     el.className = 'room';
+    el.dataset.roomtarget = room.id;
     const hasPhotos = room.photos.length > 0;
     el.innerHTML = `
       <div class="room-head">
@@ -897,11 +932,13 @@ function renderRooms(){
     list.appendChild(el);
     const grid = el.querySelector(`#grid-${room.id}`);
     room.photos.forEach((p, idx) => {
+      const flatIndex = fillPhotoList.length;
+      fillPhotoList.push({ dataUrl:p.dataUrl, caption:p.caption, roomName:room.name });
       const tile = document.createElement('div');
       tile.className = 'photo-tile';
       tile.innerHTML = `
-        <div class="thumb-wrap">
-          <img src="${p.dataUrl}">
+        <div class="thumb-wrap" data-dragroom="${room.id}" data-dragidx="${idx}" data-filllightbox="${flatIndex}">
+          <img src="${p.dataUrl}" draggable="false">
           <button class="del" data-delphoto="${room.id}:${idx}">✕</button>
         </div>
         <input type="text" class="cap-input" placeholder="${t('ph_caption')}" value="${escapeHtml(p.caption||'')}" data-capinput="${room.id}:${idx}">
@@ -955,6 +992,132 @@ function renderRooms(){
       const room = rooms.find(x=>x.id == roomId);
       if(room && room.photos[idx]) room.photos[idx].caption = e.target.value;
     });
+  });
+  list.querySelectorAll('[data-dragroom]').forEach(el=> setupPhotoDrag(el));
+}
+
+// ================= ARRASTRAR FOTOS ENTRE ESTANCIAS =================
+function setupPhotoDrag(thumbEl){
+  const LONGPRESS_MS = 320;
+  const MOVE_CANCEL_PX = 10;
+  const EDGE_ZONE = 90; // px desde el borde donde empieza el auto-scroll
+  const MAX_SCROLL_SPEED = 16; // px por fotograma
+  let pressTimer = null;
+  let dragging = false;
+  let startX = 0, startY = 0;
+  let lastX = 0, lastY = 0;
+  let ghost = null;
+  let hintEl = null;
+  let currentTarget = null;
+  let scrollRAF = null;
+
+  function cleanup(){
+    dragging = false;
+    if(ghost){ ghost.remove(); ghost = null; }
+    if(hintEl){ hintEl.remove(); hintEl = null; }
+    document.querySelectorAll('.room.drop-target').forEach(r=>r.classList.remove('drop-target'));
+    thumbEl.classList.remove('dragging');
+    currentTarget = null;
+    if(scrollRAF){ cancelAnimationFrame(scrollRAF); scrollRAF = null; }
+  }
+
+  function autoScrollStep(){
+    if(!dragging){ scrollRAF = null; return; }
+    let dy = 0;
+    if(lastY < EDGE_ZONE){
+      dy = -MAX_SCROLL_SPEED * (1 - lastY / EDGE_ZONE);
+    } else if(lastY > window.innerHeight - EDGE_ZONE){
+      dy = MAX_SCROLL_SPEED * (1 - (window.innerHeight - lastY) / EDGE_ZONE);
+    }
+    if(dy !== 0){
+      window.scrollBy(0, dy);
+      moveGhost(lastX, lastY); // reevaluar la estancia bajo el dedo, aunque este no se mueva
+    }
+    scrollRAF = requestAnimationFrame(autoScrollStep);
+  }
+
+  function startDrag(x, y){
+    dragging = true;
+    thumbEl.classList.add('dragging');
+    const img = thumbEl.querySelector('img');
+    ghost = document.createElement('div');
+    ghost.className = 'drag-ghost';
+    ghost.style.width = '90px';
+    ghost.style.height = '68px';
+    ghost.innerHTML = `<img src="${img.src}">`;
+    document.body.appendChild(ghost);
+    hintEl = document.createElement('div');
+    hintEl.className = 'drag-hint';
+    hintEl.textContent = t('drag_hint');
+    document.body.appendChild(hintEl);
+    moveGhost(x, y);
+    scrollRAF = requestAnimationFrame(autoScrollStep);
+  }
+
+  function moveGhost(x, y){
+    lastX = x; lastY = y;
+    if(ghost){ ghost.style.left = x + 'px'; ghost.style.top = y + 'px'; }
+    const el = document.elementFromPoint(x, y);
+    const roomEl = el ? el.closest('.room') : null;
+    if(roomEl !== currentTarget){
+      if(currentTarget) currentTarget.classList.remove('drop-target');
+      currentTarget = roomEl;
+      if(currentTarget) currentTarget.classList.add('drop-target');
+    }
+  }
+
+  function onPointerMove(e){
+    const x = e.clientX, y = e.clientY;
+    if(!dragging){
+      if(Math.abs(x-startX) > MOVE_CANCEL_PX || Math.abs(y-startY) > MOVE_CANCEL_PX){
+        clearTimeout(pressTimer);
+      }
+      return;
+    }
+    e.preventDefault();
+    moveGhost(x, y);
+  }
+
+  function onPointerUp(e){
+    clearTimeout(pressTimer);
+    document.removeEventListener('pointermove', onPointerMove);
+    document.removeEventListener('pointerup', onPointerUp);
+    document.removeEventListener('pointercancel', onPointerUp);
+    if(!dragging){ return; }
+    const sourceRoomId = thumbEl.dataset.dragroom;
+    const sourceIdx = parseInt(thumbEl.dataset.dragidx, 10);
+    const targetRoomEl = currentTarget;
+    cleanup();
+    if(targetRoomEl){
+      const targetRoomId = targetRoomEl.dataset.roomtarget;
+      if(targetRoomId != sourceRoomId){
+        const sourceRoom = rooms.find(r=>r.id == sourceRoomId);
+        const targetRoom = rooms.find(r=>r.id == targetRoomId);
+        if(sourceRoom && targetRoom && sourceRoom.photos[sourceIdx]){
+          const [photo] = sourceRoom.photos.splice(sourceIdx, 1);
+          targetRoom.photos.push(photo);
+          renderRooms();
+          scheduleAutosave();
+          toast(tr('toast_photo_moved', targetRoom.name));
+        }
+      }
+    }
+  }
+
+  thumbEl.addEventListener('contextmenu', e=> e.preventDefault());
+  thumbEl.addEventListener('click', ()=>{
+    const idx = parseInt(thumbEl.dataset.filllightbox, 10);
+    openLightbox(fillPhotoList, idx);
+  });
+
+  thumbEl.addEventListener('pointerdown', e=>{
+    if(e.button !== undefined && e.button !== 0) return;
+    startX = e.clientX; startY = e.clientY;
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(()=> startDrag(startX, startY), LONGPRESS_MS);
+    document.addEventListener('pointermove', onPointerMove, { passive:false });
+    document.addEventListener('pointerup', onPointerUp);
+    document.addEventListener('pointercancel', onPointerUp);
   });
 }
 
@@ -1086,13 +1249,14 @@ function renderOwners(){
 }
 
 // ================= REVIEW STEP =================
-let reviewPhotoList = [];
+let lightboxList = [];  // lista activa (paso 1 o revisión) para el visor a pantalla completa
+let fillPhotoList = []; // lista de fotos del paso 1, reconstruida en cada renderRooms
 let lightboxIndex = 0;
 
 function renderReview(){
   const reviewRooms = document.getElementById('reviewRooms');
   reviewRooms.innerHTML = '';
-  reviewPhotoList = [];
+  reviewPhotoList = [];  // lista propia de la revisión (paso 2)
   const roomsWithPhotos = rooms.filter(r=>r.photos.length>0);
   if(roomsWithPhotos.length === 0){
     reviewRooms.innerHTML = '<div class="review-empty">' + t('review_empty_photos') + '</div>';
@@ -1122,7 +1286,7 @@ function renderReview(){
     reviewRooms.appendChild(block);
   });
   reviewRooms.querySelectorAll('[data-lightbox]').forEach(el=>{
-    el.addEventListener('click', ()=> openLightbox(parseInt(el.dataset.lightbox,10)));
+    el.addEventListener('click', ()=> openLightbox(reviewPhotoList, parseInt(el.dataset.lightbox,10)));
   });
 
   const reviewSig = document.getElementById('reviewSignatures');
@@ -1192,7 +1356,8 @@ function setupSignaturePad(canvas, tenant){
 }
 
 // ================= LIGHTBOX =================
-function openLightbox(idx){
+function openLightbox(list, idx){
+  lightboxList = list;
   lightboxIndex = idx;
   renderLightbox();
   document.getElementById('lightbox').classList.add('open');
@@ -1201,7 +1366,7 @@ function closeLightbox(){
   document.getElementById('lightbox').classList.remove('open');
 }
 function renderLightbox(){
-  const photo = reviewPhotoList[lightboxIndex];
+  const photo = lightboxList[lightboxIndex];
   if(!photo) return;
   document.getElementById('lightboxImg').src = photo.dataUrl;
   document.getElementById('lightboxRoom').textContent = photo.roomName;
@@ -1213,16 +1378,16 @@ function renderLightbox(){
     capEl.textContent = t('no_comment');
     capEl.classList.add('empty');
   }
-  document.getElementById('lightboxCounter').textContent = (lightboxIndex+1) + ' / ' + reviewPhotoList.length;
-  document.getElementById('lightboxPrev').style.visibility = reviewPhotoList.length > 1 ? 'visible' : 'hidden';
-  document.getElementById('lightboxNext').style.visibility = reviewPhotoList.length > 1 ? 'visible' : 'hidden';
+  document.getElementById('lightboxCounter').textContent = (lightboxIndex+1) + ' / ' + lightboxList.length;
+  document.getElementById('lightboxPrev').style.visibility = lightboxList.length > 1 ? 'visible' : 'hidden';
+  document.getElementById('lightboxNext').style.visibility = lightboxList.length > 1 ? 'visible' : 'hidden';
 }
 function lightboxPrev(){
-  lightboxIndex = (lightboxIndex - 1 + reviewPhotoList.length) % reviewPhotoList.length;
+  lightboxIndex = (lightboxIndex - 1 + lightboxList.length) % lightboxList.length;
   renderLightbox();
 }
 function lightboxNext(){
-  lightboxIndex = (lightboxIndex + 1) % reviewPhotoList.length;
+  lightboxIndex = (lightboxIndex + 1) % lightboxList.length;
   renderLightbox();
 }
 document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
@@ -1481,6 +1646,92 @@ async function buildPdf(){
 function sanitizeFolderName(name){
   return (name || 'estancia').trim().replace(/[\\/:*?"<>|]+/g,'_') || 'estancia';
 }
+
+// ================= IMPORTAR FOTOS DESDE ZIP =================
+function getImageSize(dataUrl){
+  return new Promise(resolve=>{
+    const img = new Image();
+    img.onload = ()=> resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = ()=> resolve({ width:null, height:null });
+    img.src = dataUrl;
+  });
+}
+
+function findOrCreateRoomByName(name){
+  const clean = (name || '').trim();
+  let room = rooms.find(r => r.name.trim().toLowerCase() === clean.toLowerCase());
+  if(!room){
+    roomCounter++;
+    room = { id: roomCounter, kind:'generic', num: roomCounter, autoName:false, name: clean || (t('room_default') + ' ' + roomCounter), photos: [] };
+    rooms.push(room);
+  }
+  return room;
+}
+
+async function importPhotosFromZips(files){
+  toast(t('toast_importing_zip'));
+  let importedPhotos = 0;
+  const touchedRooms = new Set();
+  let hadError = false;
+
+  for(const file of files){
+    try{
+      const zip = await JSZip.loadAsync(file);
+      // agrupar entradas por carpeta de primer nivel (cada carpeta = una estancia)
+      const byFolder = {};
+      zip.forEach((relPath, entry)=>{
+        if(entry.dir) return;
+        if(!/\.(jpe?g|png)$/i.test(relPath)) return;
+        const parts = relPath.split('/');
+        if(parts.length < 2) return; // ignorar archivos sueltos sin carpeta
+        const folder = parts[0];
+        const fileName = parts[parts.length-1];
+        (byFolder[folder] = byFolder[folder] || []).push({ fileName, entry });
+      });
+
+      for(const folder of Object.keys(byFolder)){
+        const folderMatch = folder.match(/^\d{2}_(.*)$/);
+        const roomName = folderMatch ? folderMatch[1] : folder;
+        const room = findOrCreateRoomByName(roomName);
+        touchedRooms.add(room.id);
+
+        // ordenar por el número de archivo (01, 02, ...) para mantener el orden original
+        byFolder[folder].sort((a,b)=> a.fileName.localeCompare(b.fileName));
+
+        for(const item of byFolder[folder]){
+          const ext = (item.fileName.match(/\.(jpe?g|png)$/i) || ['','jpg'])[1].toLowerCase();
+          const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+          const base64 = await item.entry.async('base64');
+          const dataUrl = `data:${mime};base64,${base64}`;
+          const size = await getImageSize(dataUrl);
+
+          const fileMatch = item.fileName.match(/^\d{2}(?:_(.*))?\.(?:jpe?g|png)$/i);
+          const caption = fileMatch && fileMatch[1] ? fileMatch[1] : '';
+
+          room.photos.push({ dataUrl, width:size.width, height:size.height, caption });
+          importedPhotos++;
+        }
+      }
+    }catch(e){
+      hadError = true;
+    }
+  }
+
+  renderRooms();
+  scheduleAutosave();
+  if(hadError) toast(t('toast_import_error'));
+  else toast(tr('toast_import_done', importedPhotos, touchedRooms.size));
+}
+
+document.getElementById('importZipBtn').addEventListener('click', ()=>{
+  document.getElementById('importZipInput').click();
+});
+document.getElementById('importZipInput').addEventListener('change', async e=>{
+  const files = Array.from(e.target.files);
+  if(files.length === 0) return;
+  await importPhotosFromZips(files);
+  e.target.value = ''; // permitir volver a seleccionar los mismos archivos más adelante
+});
 
 let cachedZipFiles = null;
 
