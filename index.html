@@ -955,9 +955,13 @@ function renderRooms(){
   });
   list.querySelectorAll('[data-remove]').forEach(btn=>{
     btn.addEventListener('click', e=>{
-      rooms = rooms.filter(x=>x.id != e.target.dataset.remove);
-      renderRooms();
-      scheduleAutosave();
+      e.preventDefault();
+      const removeId = e.target.dataset.remove;
+      setTimeout(()=>{
+        rooms = rooms.filter(x=>x.id != removeId);
+        renderRooms();
+        scheduleAutosave();
+      }, 0);
     });
   });
   list.querySelectorAll('[data-addphoto]').forEach(btn=>{
@@ -981,11 +985,17 @@ function renderRooms(){
     btn.addEventListener('pointerdown', e=> e.stopPropagation());
     btn.addEventListener('click', e=>{
       e.stopPropagation();
+      e.preventDefault();
       const [roomId, idx] = e.target.dataset.delphoto.split(':');
-      const room = rooms.find(x=>x.id == roomId);
-      room.photos.splice(idx,1);
-      renderRooms();
-      scheduleAutosave();
+      // se retrasa el redibujado para que el navegador termine de procesar
+      // el toque original antes de mutar el DOM (evita un "clic fantasma"
+      // sobre la foto que queda en esa misma posición tras eliminar esta)
+      setTimeout(()=>{
+        const room = rooms.find(x=>x.id == roomId);
+        room.photos.splice(idx,1);
+        renderRooms();
+        scheduleAutosave();
+      }, 0);
     });
   });
   list.querySelectorAll('[data-capinput]').forEach(inp=>{
