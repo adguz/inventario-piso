@@ -978,7 +978,9 @@ function renderRooms(){
     });
   });
   list.querySelectorAll('[data-delphoto]').forEach(btn=>{
+    btn.addEventListener('pointerdown', e=> e.stopPropagation());
     btn.addEventListener('click', e=>{
+      e.stopPropagation();
       const [roomId, idx] = e.target.dataset.delphoto.split(':');
       const room = rooms.find(x=>x.id == roomId);
       room.photos.splice(idx,1);
