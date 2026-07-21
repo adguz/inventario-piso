@@ -103,6 +103,11 @@
     background:var(--ink); color:#fff; border-radius:5px;
     padding:3px 7px; letter-spacing:.03em; flex-shrink:0;
   }
+  .room-drag-handle{
+    font-size:18px; color:var(--ink-soft); flex-shrink:0; cursor:grab;
+    touch-action:none; padding:2px 2px; line-height:1; user-select:none;
+    -webkit-touch-callout:none;
+  }
   .room-name{flex:1; font-weight:600; font-size:14.5px;}
   .room-name input{border:none; background:transparent; font-weight:600; font-size:14.5px; padding:2px; width:100%;}
   .stamp{
@@ -256,19 +261,24 @@
     background:var(--paper-card); border-radius:var(--radius);
     border:1px solid var(--line); max-width:400px; width:100%;
     padding:20px; box-shadow:0 10px 30px rgba(0,0,0,.25);
+    max-height:85vh; display:flex; flex-direction:column;
   }
   .modal-title{
     font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:17px;
-    margin-bottom:14px;
+    margin-bottom:14px; flex-shrink:0;
   }
   .modal-file-list{
     list-style:none; margin:0 0 14px; padding:0;
+    overflow-y:auto; flex-shrink:1; min-height:0;
   }
   .modal-file-list li{
     display:flex; align-items:flex-start; gap:8px;
     font-size:14px; padding:8px 0; border-bottom:1px solid var(--line);
   }
   .modal-file-list li:last-child{border-bottom:none;}
+  .modal-file-check{
+    width:19px; height:19px; margin-top:1px; flex-shrink:0; accent-color:var(--flag);
+  }
   .modal-file-text{display:flex; flex-direction:column; gap:2px; min-width:0;}
   .modal-file-name{
     font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600;
@@ -283,12 +293,21 @@
   .modal-location{
     font-size:12.5px; color:var(--ink-soft); line-height:1.4;
     background:#F6F7F2; border-radius:7px; padding:10px 12px; margin-bottom:16px;
+    flex-shrink:0;
   }
-  .modal-actions{display:flex; gap:10px;}
+  .modal-actions{display:flex; gap:10px; flex-shrink:0;}
   .modal-actions .btn{padding:12px 10px;}
+  .modal-clear-session{
+    display:flex; align-items:center; gap:8px; font-size:12.5px;
+    color:var(--ink-soft); margin-bottom:14px; flex-shrink:0; cursor:pointer;
+  }
+  .modal-clear-session input{width:17px; height:17px; accent-color:var(--flag); flex-shrink:0;}
 
   .room.drop-target{
     outline:2px dashed var(--flag); outline-offset:-2px; background:#FBF0EC;
+  }
+  .photo-tile.drop-target-photo{
+    outline:2px dashed var(--flag); outline-offset:-2px;
   }
   .photo-tile .thumb-wrap.dragging{opacity:.35;}
   .drag-ghost{
@@ -439,6 +458,7 @@
 <div id="resumeModalOverlay" class="modal-overlay">
   <div class="modal-card">
     <div class="modal-title" data-i18n="resume_title">Se encontró un inventario sin terminar</div>
+    <div class="modal-location" id="resumeSummary" style="font-weight:600; color:var(--ink);"></div>
     <div class="modal-location" data-i18n="resume_text">Parece que la app se cerró antes de terminar (por ejemplo, al recibir una llamada). Puedes continuar donde lo dejaste — las firmas habrá que rehacerlas — o empezar uno nuevo.</div>
     <div class="modal-actions">
       <button class="btn ghost" id="resumeDiscardBtn" data-i18n="btn_discard">Empezar de nuevo</button>
@@ -452,6 +472,10 @@
     <div class="modal-title" data-i18n="modal_title">Confirmar descarga</div>
     <ul class="modal-file-list" id="modalFileList"></ul>
     <div class="modal-location" id="modalLocation"></div>
+    <label class="modal-clear-session">
+      <input type="checkbox" id="modalClearSession">
+      <span data-i18n="modal_clear_session">Borrar la sesión guardada después de descargar</span>
+    </label>
     <div class="modal-actions">
       <button class="btn ghost" id="modalCancelBtn" data-i18n="btn_cancel">Cancelar</button>
       <button class="btn primary" id="modalAcceptBtn" data-i18n="btn_accept">Aceptar</button>
@@ -504,6 +528,7 @@ const I18N = {
     btn_add_photo:'📷 Añadir fotos',
     ph_caption:'Comentario (ej. mancha en pared)',
     title_remove_room:'Eliminar estancia',
+    title_drag_room:'Mantén pulsado y arrastra para reordenar',
     review_title:'Revisión de fotos y comentarios',
     review_hint:'Comprueba que todo está correcto antes de firmar. Si falta algo, vuelve atrás y edítalo.',
     review_empty_photos:'Todavía no se han añadido fotos.',
@@ -519,6 +544,7 @@ const I18N = {
     modal_file_pdf:'Informe en PDF (resumen del inventario)',
     modal_file_zip:(n,total)=> total > 1 ? `Carpeta de fotos ZIP — parte ${n} de ${total}` : 'Carpeta de fotos ZIP (fotos originales)',
     modal_location:'Se guardarán en la carpeta "Descargas" de tu teléfono.',
+    modal_clear_session:'Borrar la sesión guardada después de descargar',
     file_prefix_pdf:'inventario',
     file_prefix_zip:'fotos',
     file_fallback_address:'piso',
@@ -540,12 +566,16 @@ const I18N = {
     landing_inventory_btn:'Empezar inventario →',
     btn_back_start:'← Inicio',
     resume_title:'Se encontró un inventario sin terminar',
+    resume_summary_with_address:(addr,date)=> date ? `${addr} — ${date}` : addr,
+    resume_summary_no_address:'(sin dirección todavía)',
     resume_text:'Parece que la app se cerró antes de terminar (por ejemplo, al recibir una llamada). Puedes continuar donde lo dejaste — las firmas habrá que rehacerlas — o empezar uno nuevo.',
     btn_discard:'Empezar de nuevo',
     btn_resume:'Continuar',
     toast_generating_pdf:'Generando PDF…',
     toast_downloaded_both:'PDF y fotos descargados en tu carpeta de Descargas.',
     toast_downloaded_pdf:'PDF descargado en tu carpeta de Descargas.',
+    toast_downloaded_zip_only:'Fotos descargadas en tu carpeta de Descargas.',
+    toast_nothing_selected:'Selecciona al menos un archivo para descargar.',
     toast_downloaded_parts:(n)=> `PDF y fotos descargados (${n} carpetas ZIP, divididas por tamaño) en tu carpeta de Descargas.`,
     pdf_title:'Inventario fotográfico',
     pdf_property:'Inmueble',
@@ -603,6 +633,7 @@ const I18N = {
     btn_add_photo:'📷 Add photos',
     ph_caption:'Comment (e.g. stain on wall)',
     title_remove_room:'Remove room',
+    title_drag_room:'Hold and drag to reorder',
     review_title:'Photo and comment review',
     review_hint:"Check everything is correct before signing. Go back to edit if something's missing.",
     review_empty_photos:'No photos added yet.',
@@ -618,6 +649,7 @@ const I18N = {
     modal_file_pdf:'PDF report (inventory summary)',
     modal_file_zip:(n,total)=> total > 1 ? `Photos ZIP folder — part ${n} of ${total}` : 'Photos ZIP folder (original photos)',
     modal_location:'They\'ll be saved to your phone\'s "Downloads" folder.',
+    modal_clear_session:'Clear the saved session after downloading',
     file_prefix_pdf:'inventory',
     file_prefix_zip:'photos',
     file_fallback_address:'property',
@@ -639,12 +671,16 @@ const I18N = {
     landing_inventory_btn:'Start inventory →',
     btn_back_start:'← Home',
     resume_title:'An unfinished inventory was found',
+    resume_summary_with_address:(addr,date)=> date ? `${addr} — ${date}` : addr,
+    resume_summary_no_address:'(no address yet)',
     resume_text:"It looks like the app closed before you finished (for example, during a phone call). You can continue where you left off — signatures will need to be redone — or start a new one.",
     btn_discard:'Start new',
     btn_resume:'Continue',
     toast_generating_pdf:'Generating PDF…',
     toast_downloaded_both:'PDF and photos downloaded to your Downloads folder.',
     toast_downloaded_pdf:'PDF downloaded to your Downloads folder.',
+    toast_downloaded_zip_only:'Photos downloaded to your Downloads folder.',
+    toast_nothing_selected:'Select at least one file to download.',
     toast_downloaded_parts:(n)=> `PDF and photos downloaded (${n} ZIP folders, split by size) to your Downloads folder.`,
     pdf_title:'Photo inventory',
     pdf_property:'Property',
@@ -872,6 +908,11 @@ async function initApp(){
     saved.currentStep === 'fill' || saved.currentStep === 'review'
   );
   if(hasContent){
+    const addr = (saved.propAddress || '').trim();
+    const date = (saved.propDate || '').trim();
+    document.getElementById('resumeSummary').textContent = addr
+      ? tr('resume_summary_with_address', addr, date)
+      : t('resume_summary_no_address');
     document.getElementById('resumeModalOverlay').classList.add('open');
     document.getElementById('resumeContinueBtn').addEventListener('click', async ()=>{
       document.getElementById('resumeModalOverlay').classList.remove('open');
@@ -918,7 +959,7 @@ function renderRooms(){
     const hasPhotos = room.photos.length > 0;
     el.innerHTML = `
       <div class="room-head">
-        <span class="room-tab">${String(room.id).padStart(2,'0')}</span>
+        <span class="room-drag-handle" data-roomdrag="${room.id}" title="${t('title_drag_room')}">⠿</span>
         <span class="room-name"><input type="text" value="${escapeHtml(room.name)}" data-room="${room.id}" class="room-name-input"></span>
         <span class="stamp ${hasPhotos ? '' : 'pending'}">${hasPhotos ? tr('stamp_photos_n', room.photos.length) : t('stamp_none')}</span>
         <button class="remove-room" data-remove="${room.id}" title="${t('title_remove_room')}">✕</button>
@@ -1006,6 +1047,7 @@ function renderRooms(){
     });
   });
   list.querySelectorAll('[data-dragroom]').forEach(el=> setupPhotoDrag(el));
+  list.querySelectorAll('[data-roomdrag]').forEach(el=> setupRoomDrag(el));
 }
 
 // ================= ARRASTRAR FOTOS ENTRE ESTANCIAS =================
@@ -1021,6 +1063,7 @@ function setupPhotoDrag(thumbEl){
   let ghost = null;
   let hintEl = null;
   let currentTarget = null;
+  let currentTile = null;
   let scrollRAF = null;
 
   function cleanup(){
@@ -1028,8 +1071,10 @@ function setupPhotoDrag(thumbEl){
     if(ghost){ ghost.remove(); ghost = null; }
     if(hintEl){ hintEl.remove(); hintEl = null; }
     document.querySelectorAll('.room.drop-target').forEach(r=>r.classList.remove('drop-target'));
+    document.querySelectorAll('.photo-tile.drop-target-photo').forEach(t=>t.classList.remove('drop-target-photo'));
     thumbEl.classList.remove('dragging');
     currentTarget = null;
+    currentTile = null;
     if(scrollRAF){ cancelAnimationFrame(scrollRAF); scrollRAF = null; }
   }
 
@@ -1043,7 +1088,7 @@ function setupPhotoDrag(thumbEl){
     }
     if(dy !== 0){
       window.scrollBy(0, dy);
-      moveGhost(lastX, lastY); // reevaluar la estancia bajo el dedo, aunque este no se mueva
+      moveGhost(lastX, lastY); // reevaluar el objetivo bajo el dedo, aunque este no se mueva
     }
     scrollRAF = requestAnimationFrame(autoScrollStep);
   }
@@ -1070,11 +1115,20 @@ function setupPhotoDrag(thumbEl){
     lastX = x; lastY = y;
     if(ghost){ ghost.style.left = x + 'px'; ghost.style.top = y + 'px'; }
     const el = document.elementFromPoint(x, y);
+    const tileThumb = el ? el.closest('[data-dragroom]') : null;
     const roomEl = el ? el.closest('.room') : null;
+    const validTile = (tileThumb && tileThumb !== thumbEl) ? tileThumb : null;
+
+    if(validTile !== currentTile){
+      if(currentTile) currentTile.closest('.photo-tile').classList.remove('drop-target-photo');
+      currentTile = validTile;
+      if(currentTile) currentTile.closest('.photo-tile').classList.add('drop-target-photo');
+    }
     if(roomEl !== currentTarget){
       if(currentTarget) currentTarget.classList.remove('drop-target');
       currentTarget = roomEl;
-      if(currentTarget) currentTarget.classList.add('drop-target');
+      // si hay una foto concreta señalada, no resaltamos toda la estancia a la vez
+      if(currentTarget && !validTile) currentTarget.classList.add('drop-target');
     }
   }
 
@@ -1098,14 +1152,33 @@ function setupPhotoDrag(thumbEl){
     if(!dragging){ return; }
     const sourceRoomId = thumbEl.dataset.dragroom;
     const sourceIdx = parseInt(thumbEl.dataset.dragidx, 10);
+    const targetTileEl = currentTile;
     const targetRoomEl = currentTarget;
     cleanup();
-    if(targetRoomEl){
+
+    const sourceRoom = rooms.find(r=>r.id == sourceRoomId);
+    if(!sourceRoom || !sourceRoom.photos[sourceIdx]) return;
+
+    if(targetTileEl){
+      // se soltó justo sobre otra foto: insertar en esa posición exacta
+      // (misma estancia = reordenar, otra estancia = mover a ese hueco)
+      const targetRoomId = targetTileEl.dataset.dragroom;
+      const targetIdx = parseInt(targetTileEl.dataset.dragidx, 10);
+      const targetRoom = rooms.find(r=>r.id == targetRoomId);
+      if(!targetRoom) return;
+      const [photo] = sourceRoom.photos.splice(sourceIdx, 1);
+      let insertIdx = targetIdx;
+      if(targetRoom === sourceRoom && sourceIdx < targetIdx) insertIdx -= 1;
+      targetRoom.photos.splice(insertIdx, 0, photo);
+      renderRooms();
+      scheduleAutosave();
+      if(targetRoom !== sourceRoom) toast(tr('toast_photo_moved', targetRoom.name));
+    } else if(targetRoomEl){
+      // se soltó en un hueco de la estancia (no sobre una foto concreta): añadir al final
       const targetRoomId = targetRoomEl.dataset.roomtarget;
       if(targetRoomId != sourceRoomId){
-        const sourceRoom = rooms.find(r=>r.id == sourceRoomId);
         const targetRoom = rooms.find(r=>r.id == targetRoomId);
-        if(sourceRoom && targetRoom && sourceRoom.photos[sourceIdx]){
+        if(targetRoom){
           const [photo] = sourceRoom.photos.splice(sourceIdx, 1);
           targetRoom.photos.push(photo);
           renderRooms();
@@ -1127,6 +1200,127 @@ function setupPhotoDrag(thumbEl){
     startX = e.clientX; startY = e.clientY;
     clearTimeout(pressTimer);
     pressTimer = setTimeout(()=> startDrag(startX, startY), LONGPRESS_MS);
+    document.addEventListener('pointermove', onPointerMove, { passive:false });
+    document.addEventListener('pointerup', onPointerUp);
+    document.addEventListener('pointercancel', onPointerUp);
+  });
+}
+
+// ================= REORDENAR ESTANCIAS (arrastrar por el asa ⠿) =================
+function setupRoomDrag(handleEl){
+  const EDGE_ZONE = 90;
+  const MAX_SCROLL_SPEED = 16;
+  let dragging = false;
+  let ghost = null;
+  let lastX = 0, lastY = 0;
+  let currentTarget = null;
+  let insertAfter = false;
+  let scrollRAF = null;
+
+  function cleanup(){
+    dragging = false;
+    if(ghost){ ghost.remove(); ghost = null; }
+    document.querySelectorAll('.room.drop-target').forEach(r=>r.classList.remove('drop-target'));
+    const roomEl = handleEl.closest('.room');
+    if(roomEl) roomEl.style.opacity = '';
+    currentTarget = null;
+    if(scrollRAF){ cancelAnimationFrame(scrollRAF); scrollRAF = null; }
+  }
+
+  function autoScrollStep(){
+    if(!dragging){ scrollRAF = null; return; }
+    let dy = 0;
+    if(lastY < EDGE_ZONE){
+      dy = -MAX_SCROLL_SPEED * (1 - lastY / EDGE_ZONE);
+    } else if(lastY > window.innerHeight - EDGE_ZONE){
+      dy = MAX_SCROLL_SPEED * (1 - (window.innerHeight - lastY) / EDGE_ZONE);
+    }
+    if(dy !== 0){
+      window.scrollBy(0, dy);
+      updateTarget(lastX, lastY);
+    }
+    scrollRAF = requestAnimationFrame(autoScrollStep);
+  }
+
+  function updateTarget(x, y){
+    lastX = x; lastY = y;
+    if(ghost){ ghost.style.left = x + 'px'; ghost.style.top = y + 'px'; }
+    const el = document.elementFromPoint(x, y);
+    const roomEl = el ? el.closest('.room') : null;
+    const selfRoomEl = handleEl.closest('.room');
+    const validTarget = (roomEl && roomEl !== selfRoomEl) ? roomEl : null;
+    if(validTarget !== currentTarget){
+      if(currentTarget) currentTarget.classList.remove('drop-target');
+      currentTarget = validTarget;
+      if(currentTarget) currentTarget.classList.add('drop-target');
+    }
+    if(currentTarget){
+      const rect = currentTarget.getBoundingClientRect();
+      insertAfter = y > rect.top + rect.height / 2;
+    }
+  }
+
+  function startDrag(x, y){
+    dragging = true;
+    const roomEl = handleEl.closest('.room');
+    roomEl.style.opacity = '0.35';
+    ghost = document.createElement('div');
+    ghost.className = 'drag-ghost';
+    ghost.style.width = '150px';
+    ghost.style.height = '40px';
+    ghost.style.display = 'flex';
+    ghost.style.alignItems = 'center';
+    ghost.style.justifyContent = 'center';
+    ghost.style.background = '#20291F';
+    ghost.style.color = '#fff';
+    ghost.style.fontFamily = "'IBM Plex Mono',monospace";
+    ghost.style.fontSize = '12px';
+    ghost.style.padding = '0 12px';
+    ghost.style.textAlign = 'center';
+    ghost.style.whiteSpace = 'nowrap';
+    ghost.style.overflow = 'hidden';
+    ghost.style.textOverflow = 'ellipsis';
+    const nameInput = roomEl.querySelector('.room-name-input');
+    ghost.textContent = (nameInput && nameInput.value) || t('room_default');
+    document.body.appendChild(ghost);
+    updateTarget(x, y);
+    scrollRAF = requestAnimationFrame(autoScrollStep);
+  }
+
+  function onPointerMove(e){
+    if(!dragging) return;
+    e.preventDefault();
+    updateTarget(e.clientX, e.clientY);
+  }
+
+  function onPointerUp(){
+    document.removeEventListener('pointermove', onPointerMove);
+    document.removeEventListener('pointerup', onPointerUp);
+    document.removeEventListener('pointercancel', onPointerUp);
+    if(!dragging){ return; }
+    const sourceRoomId = handleEl.dataset.roomdrag;
+    const targetEl = currentTarget;
+    const doInsertAfter = insertAfter;
+    cleanup();
+    if(targetEl){
+      const targetRoomId = targetEl.dataset.roomtarget;
+      const fromIdx = rooms.findIndex(r=> r.id == sourceRoomId);
+      if(fromIdx > -1){
+        const [moved] = rooms.splice(fromIdx, 1);
+        let toIdx = rooms.findIndex(r=> r.id == targetRoomId);
+        if(toIdx === -1) toIdx = rooms.length;
+        const insertIdx = doInsertAfter ? toIdx + 1 : toIdx;
+        rooms.splice(insertIdx, 0, moved);
+        renderRooms();
+        scheduleAutosave();
+      }
+    }
+  }
+
+  handleEl.addEventListener('pointerdown', e=>{
+    if(e.button !== undefined && e.button !== 0) return;
+    e.preventDefault();
+    startDrag(e.clientX, e.clientY);
     document.addEventListener('pointermove', onPointerMove, { passive:false });
     document.addEventListener('pointerup', onPointerUp);
     document.addEventListener('pointercancel', onPointerUp);
@@ -1278,7 +1472,6 @@ function renderReview(){
     block.className = 'review-room';
     block.innerHTML = `
       <div class="review-room-title">
-        <span class="room-tab">${String(room.id).padStart(2,'0')}</span>
         ${escapeHtml(room.name)}
       </div>
       <div class="photo-grid"></div>
@@ -1876,16 +2069,17 @@ function showDownloadModal(pdfFile, zipFiles){
   list.innerHTML = '';
 
   const pdfLi = document.createElement('li');
-  pdfLi.innerHTML = `<span class="file-icon">PDF</span><span class="modal-file-text"><span class="modal-file-name">${escapeHtml(pdfFile.name)}</span><span class="modal-file-desc">${t('modal_file_pdf')}</span></span>`;
+  pdfLi.innerHTML = `<input type="checkbox" class="modal-file-check" data-filekind="pdf" checked><span class="file-icon">PDF</span><span class="modal-file-text"><span class="modal-file-name">${escapeHtml(pdfFile.name)}</span><span class="modal-file-desc">${t('modal_file_pdf')}</span></span>`;
   list.appendChild(pdfLi);
 
   zipFiles.forEach((f, idx)=>{
     const li = document.createElement('li');
-    li.innerHTML = `<span class="file-icon">ZIP</span><span class="modal-file-text"><span class="modal-file-name">${escapeHtml(f.name)}</span><span class="modal-file-desc">${tr('modal_file_zip', idx+1, zipFiles.length)}</span></span>`;
+    li.innerHTML = `<input type="checkbox" class="modal-file-check" data-filekind="zip" data-zipidx="${idx}" checked><span class="file-icon">ZIP</span><span class="modal-file-text"><span class="modal-file-name">${escapeHtml(f.name)}</span><span class="modal-file-desc">${tr('modal_file_zip', idx+1, zipFiles.length)}</span></span>`;
     list.appendChild(li);
   });
 
   document.getElementById('modalLocation').textContent = t('modal_location');
+  document.getElementById('modalClearSession').checked = false;
   document.getElementById('downloadModalOverlay').classList.add('open');
 }
 function closeDownloadModal(){
@@ -1901,17 +2095,34 @@ document.getElementById('downloadModalOverlay').addEventListener('click', e=>{
 document.getElementById('modalAcceptBtn').addEventListener('click', async ()=>{
   if(!pendingDownload) return;
   const { pdfFile, zipFiles } = pendingDownload;
-  closeDownloadModal();
-  downloadFile(pdfFile);
-  for(let i=0; i<zipFiles.length; i++){
-    await new Promise(r=>setTimeout(()=>{ downloadFile(zipFiles[i]); r(); }, 400));
+
+  const wantPdf = document.querySelector('.modal-file-check[data-filekind="pdf"]').checked;
+  const zipChecks = document.querySelectorAll('.modal-file-check[data-filekind="zip"]');
+  const wantedZips = zipFiles.filter((f, idx)=> zipChecks[idx] && zipChecks[idx].checked);
+  const shouldClearSession = document.getElementById('modalClearSession').checked;
+
+  if(!wantPdf && wantedZips.length === 0){
+    toast(t('toast_nothing_selected'));
+    return;
   }
-  if(zipFiles.length > 1){
-    toast(t('toast_downloaded_parts')(zipFiles.length));
-  } else if(zipFiles.length === 1){
+
+  closeDownloadModal();
+  if(wantPdf) downloadFile(pdfFile);
+  for(let i=0; i<wantedZips.length; i++){
+    await new Promise(r=>setTimeout(()=>{ downloadFile(wantedZips[i]); r(); }, 400));
+  }
+
+  if(shouldClearSession) await clearState();
+
+  const total = (wantPdf?1:0) + wantedZips.length;
+  if(wantedZips.length > 1 && wantPdf){
+    toast(t('toast_downloaded_parts')(wantedZips.length));
+  } else if(total > 1){
     toast(t('toast_downloaded_both'));
-  } else {
+  } else if(wantPdf){
     toast(t('toast_downloaded_pdf'));
+  } else {
+    toast(t('toast_downloaded_zip_only'));
   }
   pendingDownload = null;
 });
