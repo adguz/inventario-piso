@@ -337,7 +337,7 @@
     </div>
   </div>
   <div class="step-indicator" id="stepIndicator" style="display:none;">
-    <span id="stepIndicatorText"><b data-i18n="step1_bold">Paso 1 de 2</b> <span data-i18n="step1_rest"> · Rellenar datos y fotos</span></span>
+    <span id="stepIndicatorText"></span>
   </div>
   <button id="backToLandingBtn" class="link-btn" style="display:none; margin-top:2px;" data-i18n="btn_back_start">← Inicio</button>
 </header>
@@ -360,6 +360,35 @@
         <div class="hint" style="margin-bottom:12px;" data-i18n="landing_contract_desc">Modelos gratuitos de Idealista (PDF/Word) para vivienda, temporal, habitaciones, etc.</div>
         <a id="landingContractBtn" href="https://www.idealista.com/contratos-de-alquiler/modelos-contratos-alquiler" target="_blank" rel="noopener" class="btn secondary" style="text-decoration:none; display:flex; align-items:center; justify-content:center;" data-i18n="landing_contract_btn">Ver modelos de contrato</a>
       </div>
+
+      <div style="border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:14px; text-align:left;">
+        <div style="font-weight:600; font-size:14.5px; margin-bottom:4px;" data-i18n="landing_legal_title">Enlaces de referencia sobre alquiler</div>
+        <div class="hint" style="margin-bottom:12px;" data-i18n="landing_legal_desc">Acceso rápido a la LAU y otros temas puntuales. No es asesoramiento legal.</div>
+        <button id="landingLegalBtn" class="btn secondary" style="width:100%;" data-i18n="landing_legal_btn">Ver enlaces →</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="legalScreen" style="display:none;">
+    <section class="card">
+      <div class="card-head"><span class="card-title" data-i18n="legal_modal_title">Enlaces de referencia sobre alquiler</span></div>
+      <div class="hint" style="margin-bottom:14px;" data-i18n="legal_modal_disclaimer">Esto no es asesoramiento legal. Son enlaces de referencia rápida; para tu caso concreto, consulta a un profesional.</div>
+      <ul class="modal-file-list" id="legalLinksList" style="max-height:none; overflow:visible;">
+        <li>
+          <span class="file-icon">LAU</span>
+          <span class="modal-file-text">
+            <a href="https://www.boe.es/buscar/act.php?id=BOE-A-1994-26003" target="_blank" rel="noopener" class="modal-file-name" style="color:var(--flag); text-decoration:none;" data-i18n="legal_link_lau">Ley de Arrendamientos Urbanos (texto completo)</a>
+            <span class="modal-file-desc" data-i18n="legal_link_lau_desc">Texto consolidado oficial en el BOE.</span>
+          </span>
+        </li>
+        <li>
+          <span class="file-icon">IRAV</span>
+          <span class="modal-file-text">
+            <a href="https://ine.es/dyngs/INEbase/es/operacion.htm?c=Estadistica_C&cid=1254736177110&menu=ultiDatos&idp=1254735976607" target="_blank" rel="noopener" class="modal-file-name" style="color:var(--flag); text-decoration:none;" data-i18n="legal_link_irav">Índice de Referencia de Arrendamiento (IRAV)</a>
+            <span class="modal-file-desc" data-i18n="legal_link_irav_desc">Dato oficial del INE para actualizar la renta en contratos posteriores a mayo de 2023.</span>
+          </span>
+        </li>
+      </ul>
     </section>
   </div>
 
@@ -560,6 +589,16 @@ const I18N = {
     landing_subtitle:'Elige una opción para empezar.',
     landing_contract_title:'Obtener un contrato de alquiler',
     landing_contract_desc:'Modelos gratuitos de Idealista (PDF/Word) para vivienda, temporal, habitaciones, etc.',
+    landing_legal_title:'Normativa de alquiler',
+    landing_legal_desc:'Acceso rápido a la LAU y otros temas puntuales. No es asesoramiento legal.',
+    landing_legal_btn:'Acceder →',
+    legal_modal_title:'Normativa de alquiler',
+    legal_modal_disclaimer:'Esto no es asesoramiento legal. Son enlaces de referencia rápida; para tu caso concreto, consulta a un profesional.',
+    legal_link_lau:'Ley de Arrendamientos Urbanos (texto completo)',
+    legal_link_lau_desc:'Texto consolidado oficial en el BOE.',
+    legal_link_irav:'Índice de Referencia de Arrendamiento (IRAV)',
+    legal_link_irav_desc:'Dato oficial del INE para actualizar la renta en contratos posteriores a mayo de 2023.',
+    btn_close:'Cerrar',
     landing_contract_btn:'Ver modelos de contrato',
     landing_inventory_title:'Hacer el inventario fotográfico',
     landing_inventory_desc:'Fotos por estancia, comentarios, firma y PDF resumen.',
@@ -665,6 +704,16 @@ const I18N = {
     landing_subtitle:'Choose an option to get started.',
     landing_contract_title:'Get a rental contract',
     landing_contract_desc:'Free templates from Idealista (PDF/Word) for standard, short-term, room rental, etc. (Spanish site)',
+    landing_legal_title:'Rental reference links',
+    landing_legal_desc:'Quick access to the LAU and other specific topics. Not legal advice.',
+    landing_legal_btn:'View links →',
+    legal_modal_title:'Rental reference links',
+    legal_modal_disclaimer:'This is not legal advice. These are quick reference links; consult a professional for your specific situation.',
+    legal_link_lau:'Ley de Arrendamientos Urbanos (full text)',
+    legal_link_lau_desc:'Official consolidated text (Spanish BOE).',
+    legal_link_irav:'Rent Reference Index (IRAV)',
+    legal_link_irav_desc:'Official INE figure for updating rent on contracts signed after May 2023.',
+    btn_close:'Close',
     landing_contract_btn:'View contract templates',
     landing_inventory_title:'Do the photo inventory',
     landing_inventory_desc:'Room-by-room photos, comments, signature and PDF summary.',
@@ -727,9 +776,7 @@ function setLang(newLang){
   applyStaticTranslations();
   // actualizar indicador de paso según la vista actual
   const inReview = document.getElementById('stepReview').style.display === 'block';
-  document.getElementById('stepIndicatorText').innerHTML = inReview
-    ? '<b>' + t('step2_bold') + '</b> ' + t('step2_rest')
-    : '<b>' + t('step1_bold') + '</b> ' + t('step1_rest');
+  document.getElementById('stepIndicatorText').innerHTML = '';
   // retraducir nombres de estancia que no hayan sido renombrados a mano
   rooms.forEach(r=>{
     if(r.autoName) r.name = computeRoomName(r.kind, r.num);
@@ -876,7 +923,7 @@ async function restoreState(state){
     document.getElementById('footerReview').style.display = 'flex';
     document.getElementById('stepIndicator').style.display = 'block';
     document.getElementById('backToLandingBtn').style.display = 'inline-block';
-    document.getElementById('stepIndicatorText').innerHTML = '<b>' + t('step2_bold') + '</b> ' + t('step2_rest');
+    document.getElementById('stepIndicatorText').innerHTML = '';
     renderReview();
     prebuildZip();
   } else if(state.currentStep === 'fill'){
@@ -884,7 +931,7 @@ async function restoreState(state){
     document.getElementById('footerFill').style.display = 'flex';
     document.getElementById('stepIndicator').style.display = 'block';
     document.getElementById('backToLandingBtn').style.display = 'inline-block';
-    document.getElementById('stepIndicatorText').innerHTML = '<b>' + t('step1_bold') + '</b> ' + t('step1_rest');
+    document.getElementById('stepIndicatorText').innerHTML = '';
   } else {
     document.getElementById('landingScreen').style.display = 'block';
   }
@@ -1608,7 +1655,7 @@ function goToReview(){
   document.getElementById('stepReview').style.display = 'block';
   document.getElementById('footerFill').style.display = 'none';
   document.getElementById('footerReview').style.display = 'flex';
-  document.getElementById('stepIndicatorText').innerHTML = '<b>' + t('step2_bold') + '</b> ' + t('step2_rest');
+  document.getElementById('stepIndicatorText').innerHTML = '';
   renderReview();
   prebuildZip();
   window.scrollTo(0,0);
@@ -1619,7 +1666,7 @@ function goToFill(){
   document.getElementById('stepReview').style.display = 'none';
   document.getElementById('footerFill').style.display = 'flex';
   document.getElementById('footerReview').style.display = 'none';
-  document.getElementById('stepIndicatorText').innerHTML = '<b>' + t('step1_bold') + '</b> ' + t('step1_rest');
+  document.getElementById('stepIndicatorText').innerHTML = '';
   window.scrollTo(0,0);
   scheduleAutosave();
 }
@@ -1697,14 +1744,24 @@ document.getElementById('landingInventoryBtn').addEventListener('click', ()=>{
   document.getElementById('landingScreen').style.display = 'none';
   document.getElementById('stepFill').style.display = 'block';
   document.getElementById('stepIndicator').style.display = 'block';
+  document.getElementById('stepIndicatorText').innerHTML = '';
   document.getElementById('backToLandingBtn').style.display = 'inline-block';
   document.getElementById('footerFill').style.display = 'flex';
   window.scrollTo(0,0);
   scheduleAutosave();
 });
+document.getElementById('landingLegalBtn').addEventListener('click', ()=>{
+  document.getElementById('landingScreen').style.display = 'none';
+  document.getElementById('legalScreen').style.display = 'block';
+  document.getElementById('stepIndicator').style.display = 'block';
+  document.getElementById('stepIndicatorText').innerHTML = '';
+  document.getElementById('backToLandingBtn').style.display = 'inline-block';
+  window.scrollTo(0,0);
+});
 document.getElementById('backToLandingBtn').addEventListener('click', ()=>{
   document.getElementById('stepFill').style.display = 'none';
   document.getElementById('stepReview').style.display = 'none';
+  document.getElementById('legalScreen').style.display = 'none';
   document.getElementById('footerFill').style.display = 'none';
   document.getElementById('footerReview').style.display = 'none';
   document.getElementById('stepIndicator').style.display = 'none';
