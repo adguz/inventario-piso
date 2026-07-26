@@ -103,6 +103,23 @@
     background:var(--ink); color:#fff; border-radius:5px;
     padding:3px 7px; letter-spacing:.03em; flex-shrink:0;
   }
+  .header-bottom-row{display:flex; align-items:center; gap:10px; margin-top:8px; min-height:22px;}
+  .pp-donate-btn{
+    display:inline-flex; align-items:center; gap:6px; margin-left:auto; flex-shrink:0;
+    background:#FFC439; color:#111; text-decoration:none;
+    border-radius:18px; padding:5px 13px 5px 10px; font-weight:700; font-size:12px;
+    font-family:Arial, sans-serif; border:1px solid #E8B62F;
+  }
+  .pp-donate-btn.big{padding:10px 22px 10px 16px; font-size:14.5px; border-radius:22px; margin-left:0;}
+  .pp-logo{font-weight:900; font-style:italic; letter-spacing:-0.5px;}
+  .pp-logo .pay{color:#003087;}
+  .pp-logo .pal{color:#009cde;}
+  .support-banner{
+    background:#FFF8EA; border:1px solid #F0DDA8; border-radius:10px;
+    padding:14px 16px; margin-bottom:16px; display:flex; align-items:center; gap:14px; text-align:left;
+  }
+  .support-banner .txt{flex:1; font-size:12.5px; line-height:1.5; color:var(--ink);}
+  .support-banner .txt b{display:block; font-family:'Space Grotesk',sans-serif; font-size:13.5px; margin-bottom:3px;}
   .room-drag-handle{
     font-size:18px; color:var(--ink-soft); flex-shrink:0; cursor:grab;
     touch-action:none; padding:2px 2px; line-height:1; user-select:none;
@@ -336,10 +353,15 @@
       <button id="langEn" type="button">EN</button>
     </div>
   </div>
-  <div class="step-indicator" id="stepIndicator" style="display:none;">
-    <span id="stepIndicatorText"></span>
+  <div class="header-bottom-row">
+    <div class="step-indicator" id="stepIndicator" style="display:none;">
+      <span id="stepIndicatorText"></span>
+    </div>
+    <button id="backToLandingBtn" class="link-btn" style="display:none;" data-i18n="btn_back_start">← Inicio</button>
+    <a href="https://www.paypal.com/donate/?hosted_button_id=5Q2BJ2WZLR36L" target="_blank" rel="noopener" class="pp-donate-btn" id="headerDonateLink">
+      <span class="pp-logo"><span class="pay">Pay</span><span class="pal">Pal</span></span> <span data-i18n="donate_btn_label">Donar</span>
+    </a>
   </div>
-  <button id="backToLandingBtn" class="link-btn" style="display:none; margin-top:2px;" data-i18n="btn_back_start">← Inicio</button>
 </header>
 
 <main>
@@ -348,6 +370,17 @@
     <section class="card" style="text-align:center;">
       <div class="card-title" style="font-size:17px; margin-bottom:4px;" data-i18n="landing_title">¿Qué necesitas hacer?</div>
       <div class="hint" style="margin-bottom:18px;" data-i18n="landing_subtitle">Elige una opción para empezar.</div>
+
+      <div class="support-banner">
+        <span style="font-size:24px; flex-shrink:0;">🤍</span>
+        <div class="txt">
+          <b data-i18n="support_title">Esta herramienta es gratuita</b>
+          <span data-i18n="support_desc">La desarrollo y mantengo en mi tiempo libre. Si te gusta y quieres apoyar, una donación ayuda a que siga mejorando.</span>
+        </div>
+      </div>
+      <a href="https://www.paypal.com/donate/?hosted_button_id=5Q2BJ2WZLR36L" target="_blank" rel="noopener" class="pp-donate-btn big" id="landingDonateLink" style="margin-bottom:22px; justify-content:center; width:100%; box-sizing:border-box;">
+        <span class="pp-logo"><span class="pay">Pay</span><span class="pal">Pal</span></span> <span data-i18n="support_btn">Hacer una donación</span>
+      </a>
 
       <div style="border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:14px; text-align:left;">
         <div style="font-weight:600; font-size:14.5px; margin-bottom:4px;" data-i18n="landing_inventory_title">Hacer el inventario fotográfico</div>
@@ -586,6 +619,10 @@ const I18N = {
     btn_no_thanks:'No, gracias',
     btn_view_templates:'Ver modelos',
     landing_title:'¿Qué necesitas hacer?',
+    donate_btn_label:'Donar',
+    support_title:'Esta herramienta es gratuita',
+    support_desc:'La desarrollo y mantengo en mi tiempo libre. Si te gusta y quieres apoyar, una donación ayuda a que siga mejorando.',
+    support_btn:'Hacer una donación',
     landing_subtitle:'Elige una opción para empezar.',
     landing_contract_title:'Obtener un contrato de alquiler',
     landing_contract_desc:'Modelos gratuitos de Idealista (PDF/Word) para vivienda, temporal, habitaciones, etc.',
@@ -701,6 +738,10 @@ const I18N = {
     btn_no_thanks:'No, thanks',
     btn_view_templates:'View templates',
     landing_title:'What do you need to do?',
+    donate_btn_label:'Donate',
+    support_title:'This tool is free',
+    support_desc:"I build and maintain it in my free time. If you find it useful and want to support it, a donation helps keep it improving.",
+    support_btn:'Make a donation',
     landing_subtitle:'Choose an option to get started.',
     landing_contract_title:'Get a rental contract',
     landing_contract_desc:'Free templates from Idealista (PDF/Word) for standard, short-term, room rental, etc. (Spanish site)',
