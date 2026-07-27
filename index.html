@@ -395,6 +395,12 @@
       </div>
 
       <div style="border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:14px; text-align:left;">
+        <div style="font-weight:600; font-size:14.5px; margin-bottom:4px;" data-i18n="landing_irav_title">Aviso de subida de renta (IRAV)</div>
+        <div class="hint" style="margin-bottom:12px;" data-i18n="landing_irav_desc">Calcula la nueva renta y genera el texto del email, usando el último dato oficial del INE.</div>
+        <button id="landingIravBtn" class="btn secondary" style="width:100%;" data-i18n="landing_irav_btn">Generar aviso →</button>
+      </div>
+
+      <div style="border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:14px; text-align:left;">
         <div style="font-weight:600; font-size:14.5px; margin-bottom:4px;" data-i18n="landing_legal_title">Enlaces de referencia sobre alquiler</div>
         <div class="hint" style="margin-bottom:12px;" data-i18n="landing_legal_desc">Acceso rápido a la LAU y otros temas puntuales. No es asesoramiento legal.</div>
         <button id="landingLegalBtn" class="btn secondary" style="width:100%;" data-i18n="landing_legal_btn">Ver enlaces →</button>
@@ -422,6 +428,33 @@
           </span>
         </li>
       </ul>
+    </section>
+  </div>
+
+  <div id="iravScreen" style="display:none;">
+    <section class="card">
+      <div class="card-head"><span class="card-title" data-i18n="irav_sec_title">Aviso de subida de renta (IRAV)</span></div>
+      <div class="hint" style="margin-bottom:14px;" data-i18n="irav_sec_desc">Genera el texto de un email con la nueva renta calculada según el último dato del IRAV publicado por el INE.</div>
+
+      <label class="field"><span data-i18n="irav_label_tenant">Nombre del inquilino</span>
+        <input type="text" id="iravTenantName" data-i18n-ph="ph_fullname" placeholder="Nombre y apellidos">
+      </label>
+      <label class="field"><span data-i18n="label_address">Dirección</span>
+        <input type="text" id="iravAddress" data-i18n-ph="ph_address" placeholder="Calle, número, ciudad">
+      </label>
+      <div class="row2">
+        <label class="field"><span data-i18n="irav_label_rent">Renta actual (€/mes)</span>
+          <input type="text" inputmode="decimal" id="iravCurrentRent" placeholder="850">
+        </label>
+        <label class="field"><span data-i18n="irav_label_effective">Aplicable desde</span>
+          <input type="month" id="iravEffectiveDate">
+        </label>
+      </div>
+      <label class="field"><span data-i18n="irav_label_owner">Nombre del propietario (firma)</span>
+        <input type="text" id="iravOwnerName" data-i18n-ph="ph_fullname" placeholder="Nombre y apellidos">
+      </label>
+
+      <button class="btn primary" id="iravGenerateBtn" style="width:100%;" data-i18n="irav_generate_btn">Generar texto del email</button>
     </section>
   </div>
 
@@ -515,6 +548,35 @@
   <div id="lightboxRoom" class="lightbox-room"></div>
   <div id="lightboxCap" class="lightbox-cap"></div>
   <div id="lightboxCounter" class="lightbox-counter"></div>
+</div>
+
+<div id="iravManualModalOverlay" class="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-title" data-i18n="irav_manual_title">No se pudo obtener el IRAV automáticamente</div>
+    <div class="modal-location" data-i18n="irav_manual_desc">Introduce manualmente el valor del IRAV (%) consultando el enlace del INE, y el mes al que corresponde.</div>
+    <label class="field"><span data-i18n="irav_label_manual_value">Valor del IRAV (%)</span>
+      <input type="text" inputmode="decimal" id="iravManualValue" placeholder="2,25">
+    </label>
+    <label class="field"><span data-i18n="irav_label_manual_month">Mes al que corresponde</span>
+      <input type="month" id="iravManualMonth">
+    </label>
+    <div class="modal-actions">
+      <button class="btn ghost" id="iravManualCancelBtn" data-i18n="btn_cancel">Cancelar</button>
+      <button class="btn primary" id="iravManualContinueBtn" data-i18n="irav_manual_continue">Continuar</button>
+    </div>
+  </div>
+</div>
+
+<div id="iravResultModalOverlay" class="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-title" data-i18n="irav_result_title">Texto del email</div>
+    <textarea id="iravResultText" readonly style="width:100%; min-height:220px; font-family:'IBM Plex Mono',monospace; font-size:12.5px; border:1px solid var(--line); border-radius:7px; padding:10px; background:#FAFBF8; color:var(--ink); resize:vertical;"></textarea>
+    <div class="modal-location" style="margin-top:12px; margin-bottom:0;" data-i18n="irav_result_disclaimer">Verifica el cálculo y el dato del IRAV antes de enviarlo. Esta herramienta no se responsabiliza de errores en los datos introducidos o en el índice consultado.</div>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn ghost" id="iravResultCloseBtn" data-i18n="btn_close">Cerrar</button>
+      <button class="btn primary" id="iravResultCopyBtn" data-i18n="btn_copy">Copiar</button>
+    </div>
+  </div>
 </div>
 
 <div id="resumeModalOverlay" class="modal-overlay">
@@ -626,20 +688,42 @@ const I18N = {
     landing_subtitle:'Elige una opción para empezar.',
     landing_contract_title:'Obtener un contrato de alquiler',
     landing_contract_desc:'Modelos gratuitos de Idealista (PDF/Word) para vivienda, temporal, habitaciones, etc.',
+    landing_irav_title:'Aviso de subida de renta (IRAV)',
+    landing_irav_desc:'Calcula la nueva renta y genera el texto del email, usando el último dato oficial del INE.',
+    landing_irav_btn:'Generar aviso',
     landing_legal_title:'Normativa de alquiler',
     landing_legal_desc:'Acceso rápido a la LAU y otros temas puntuales. No es asesoramiento legal.',
-    landing_legal_btn:'Acceder →',
+    landing_legal_btn:'Acceder',
     legal_modal_title:'Normativa de alquiler',
     legal_modal_disclaimer:'Esto no es asesoramiento legal. Son enlaces de referencia rápida; para tu caso concreto, consulta a un profesional.',
     legal_link_lau:'Ley de Arrendamientos Urbanos (texto completo)',
     legal_link_lau_desc:'Texto consolidado oficial en el BOE.',
     legal_link_irav:'Índice de Referencia de Arrendamiento (IRAV)',
     legal_link_irav_desc:'Dato oficial del INE para actualizar la renta en contratos posteriores a mayo de 2023.',
+    irav_sec_title:'Aviso de subida de renta (IRAV)',
+    irav_sec_desc:'Genera el texto de un email con la nueva renta calculada según el último dato del IRAV publicado por el INE.',
+    irav_label_tenant:'Nombre del inquilino',
+    irav_label_rent:'Renta actual (€/mes)',
+    irav_label_effective:'Nueva renta aplicable desde',
+    irav_label_owner:'Nombre del propietario (firma)',
+    irav_generate_btn:'Generar texto del email',
+    irav_manual_title:'No se pudo obtener el IRAV automáticamente',
+    irav_manual_desc:'Introduce manualmente el valor del IRAV (%) consultando el enlace del INE, y el mes al que corresponde.',
+    irav_label_manual_value:'Valor del IRAV (%)',
+    irav_label_manual_month:'Mes al que corresponde',
+    irav_manual_continue:'Continuar',
+    irav_result_title:'Texto del email',
+    irav_result_disclaimer:'Verifica el valor del índice usado, el cálculo de la nueva mensualidad y la fecha de aplicación antes de enviar el email.',
+    btn_copy:'Copiar',
+    toast_copied:'Copiado al portapapeles.',
+    toast_irav_missing_fields:'Rellena el nombre del inquilino, la dirección, la renta actual y la fecha de aplicación.',
+    toast_irav_fetching:'Consultando el último dato del IRAV en el INE…',
+    toast_irav_date_past:'La fecha de aplicación no puede ser anterior al mes actual.',
     btn_close:'Cerrar',
     landing_contract_btn:'Ver modelos de contrato',
     landing_inventory_title:'Hacer el inventario fotográfico',
     landing_inventory_desc:'Fotos por estancia, comentarios, firma y PDF resumen.',
-    landing_inventory_btn:'Empezar inventario →',
+    landing_inventory_btn:'Empezar inventario',
     btn_back_start:'← Inicio',
     resume_title:'Se encontró un inventario sin terminar',
     resume_summary_with_address:(addr,date)=> date ? `${addr} — ${date}` : addr,
@@ -745,20 +829,42 @@ const I18N = {
     landing_subtitle:'Choose an option to get started.',
     landing_contract_title:'Get a rental contract',
     landing_contract_desc:'Free templates from Idealista (PDF/Word) for standard, short-term, room rental, etc. (Spanish site)',
-    landing_legal_title:'Rental reference links',
+    landing_irav_title:'Rent increase notice (IRAV)',
+    landing_irav_desc:'Calculates the new rent and generates the email text, using the latest official INE figure.',
+    landing_irav_btn:'Generate notice',
+    landing_legal_title:'Rental regulations',
     landing_legal_desc:'Quick access to the LAU and other specific topics. Not legal advice.',
-    landing_legal_btn:'View links →',
-    legal_modal_title:'Rental reference links',
+    landing_legal_btn:'View links',
+    legal_modal_title:'Rental regulations',
     legal_modal_disclaimer:'This is not legal advice. These are quick reference links; consult a professional for your specific situation.',
     legal_link_lau:'Ley de Arrendamientos Urbanos (full text)',
     legal_link_lau_desc:'Official consolidated text (Spanish BOE).',
     legal_link_irav:'Rent Reference Index (IRAV)',
     legal_link_irav_desc:'Official INE figure for updating rent on contracts signed after May 2023.',
+    irav_sec_title:'Rent increase notice (IRAV)',
+    irav_sec_desc:'Generates an email with the new rent, calculated using the latest IRAV figure published by the INE.',
+    irav_label_tenant:'Tenant name',
+    irav_label_rent:'Current rent (€/month)',
+    irav_label_effective:'New rent applies from',
+    irav_label_owner:'Owner name (signature)',
+    irav_generate_btn:'Generate email text',
+    irav_manual_title:'Could not fetch the IRAV automatically',
+    irav_manual_desc:'Enter the IRAV value (%) manually by checking the INE link, along with the month it corresponds to.',
+    irav_label_manual_value:'IRAV value (%)',
+    irav_label_manual_month:'Month it corresponds to',
+    irav_manual_continue:'Continue',
+    irav_result_title:'Email text',
+    irav_result_disclaimer:'Verify the index value used, the new monthly rent calculation, and the effective date before sending the email.',
+    btn_copy:'Copy',
+    toast_copied:'Copied to clipboard.',
+    toast_irav_missing_fields:'Fill in the tenant name, address, current rent and effective date.',
+    toast_irav_fetching:'Checking the latest IRAV figure at the INE…',
+    toast_irav_date_past:'The effective date cannot be earlier than the current month.',
     btn_close:'Close',
     landing_contract_btn:'View contract templates',
     landing_inventory_title:'Do the photo inventory',
     landing_inventory_desc:'Room-by-room photos, comments, signature and PDF summary.',
-    landing_inventory_btn:'Start inventory →',
+    landing_inventory_btn:'Start inventory',
     btn_back_start:'← Home',
     resume_title:'An unfinished inventory was found',
     resume_summary_with_address:(addr,date)=> date ? `${addr} — ${date}` : addr,
@@ -1715,6 +1821,178 @@ function goToFill(){
 // ================= helpers =================
 function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+// ================= GENERADOR DE AVISO DE SUBIDA DE RENTA (IRAV) =================
+const MESES_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const MONTHS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function monthLabel(year, monthIndex0){
+  const names = lang === 'en' ? MONTHS_EN : MESES_ES;
+  return names[monthIndex0] + ' de ' + year;
+}
+
+const NOMBRE_MES_A_INDICE = {
+  'enero':0,'febrero':1,'marzo':2,'abril':3,'mayo':4,'junio':5,
+  'julio':6,'agosto':7,'septiembre':8,'setiembre':8,'octubre':9,'noviembre':10,'diciembre':11
+};
+
+async function fetchLatestIrav(){
+  const resp = await fetch('https://servicios.ine.es/wstempus/js/ES/DATOS_TABLA/72975?tip=AM&nult=1');
+  if(!resp.ok) throw new Error('INE respondió con error');
+  const json = await resp.json();
+  const serie = Array.isArray(json) ? json[0] : json;
+  const dato = serie && serie.Data && serie.Data[0];
+  if(!dato || typeof dato.Valor !== 'number') throw new Error('Formato de respuesta inesperado');
+
+  let year = dato.Anyo;
+  let monthIndex0 = null;
+
+  // 1) preferimos el nombre de periodo explícito que da el INE (ej. "junio"), es lo más fiable
+  const nombrePeriodo = (dato.NombrePeriodo || (dato.Periodo && dato.Periodo.Nombre) || '').toString().toLowerCase().trim();
+  if(NOMBRE_MES_A_INDICE.hasOwnProperty(nombrePeriodo)){
+    monthIndex0 = NOMBRE_MES_A_INDICE[nombrePeriodo];
+  }
+
+  // 2) si no hay nombre, probamos el código de periodo como número de mes (1-12)
+  if(monthIndex0 === null){
+    const codigoPeriodo = dato.FK_Periodo || (dato.Periodo && dato.Periodo.Id);
+    if(typeof codigoPeriodo === 'number' && codigoPeriodo >= 1 && codigoPeriodo <= 12){
+      monthIndex0 = codigoPeriodo - 1;
+    }
+  }
+
+  // 3) último recurso: derivar del timestamp (con corrección empírica de +1 mes,
+  // ya que el campo Fecha del INE ha resultado no coincidir con el mes real de los datos)
+  if(monthIndex0 === null || !year){
+    const d = new Date(dato.Fecha);
+    year = year || d.getUTCFullYear();
+    monthIndex0 = (d.getUTCMonth() + 1) % 12;
+    if(d.getUTCMonth() === 11) year += 1; // si el ajuste cruza a enero, sube el año
+  }
+
+  return { value: dato.Valor, year, monthIndex0 };
+}
+
+async function buildIravEmail(iravValue, iravMonthLabel){
+  const tenant = document.getElementById('iravTenantName').value.trim();
+  const address = document.getElementById('iravAddress').value.trim();
+  const currentRent = parseFloat(document.getElementById('iravCurrentRent').value.replace(',','.'));
+  const effectiveRaw = document.getElementById('iravEffectiveDate').value; // YYYY-MM
+  const owner = document.getElementById('iravOwnerName').value.trim();
+
+  const newRent = Math.round(currentRent * (1 + iravValue/100));
+  const fmt = n => n.toLocaleString(lang==='en' ? 'en-GB' : 'es-ES', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  const fmtInt = n => n.toLocaleString(lang==='en' ? 'en-GB' : 'es-ES', { minimumFractionDigits:0, maximumFractionDigits:0 });
+
+  let effectiveLabel = effectiveRaw;
+  if(effectiveRaw){
+    const [y,m] = effectiveRaw.split('-').map(Number);
+    effectiveLabel = monthLabel(y, m-1);
+  }
+
+  const iravUrl = 'https://ine.es/dyngs/INEbase/es/operacion.htm?c=Estadistica_C&cid=1254736177110&menu=ultiDatos&idp=1254735976607';
+
+  if(lang === 'en'){
+    return `Hi ${tenant || ''},
+
+I'm writing to let you know that I'll be updating the monthly rent for the property at ${address || '(address)'}, in accordance with the Índice de Referencia de Arrendamientos de Vivienda (IRAV).
+
+Current monthly rent: ${fmt(currentRent)} €
+
+Index applied: ${iravValue}% (${iravMonthLabel}, latest published by the INE at the time of writing this email: ${iravUrl})
+
+New monthly rent: ${fmtInt(newRent)} €
+
+This new amount will apply from the ${effectiveLabel} instalment onward.
+
+Best regards,
+${owner || ''}`;
+  }
+
+  return `Hola ${tenant || ''},
+
+Te escribo para comunicarte que actualizaremos la mensualidad del alquiler de la vivienda en ${address || '(dirección)'}, de acuerdo con el Índice de Referencia de Arrendamientos de Vivienda (IRAV).
+
+Cuota mensual actual: ${fmt(currentRent)} €
+
+Valor del índice aplicado: ${iravValue}% (${iravMonthLabel}, último publicado por el INE en el momento de redactar este correo: ${iravUrl})
+
+Nueva cuota mensual: ${fmtInt(newRent)} €
+
+Esta nueva cantidad será aplicable a partir de la mensualidad correspondiente a ${effectiveLabel}.
+
+Un saludo,
+${owner || ''}`;
+}
+
+function showIravResult(text){
+  document.getElementById('iravResultText').value = text;
+  document.getElementById('iravResultModalOverlay').classList.add('open');
+}
+
+document.getElementById('iravGenerateBtn').addEventListener('click', async ()=>{
+  const tenant = document.getElementById('iravTenantName').value.trim();
+  const address = document.getElementById('iravAddress').value.trim();
+  const currentRentRaw = document.getElementById('iravCurrentRent').value.trim();
+  const effectiveRaw = document.getElementById('iravEffectiveDate').value;
+
+  if(!tenant || !address || !currentRentRaw || !effectiveRaw){
+    toast(t('toast_irav_missing_fields'));
+    return;
+  }
+
+  const now = new Date();
+  const currentYm = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  if(effectiveRaw < currentYm){
+    toast(t('toast_irav_date_past'));
+    return;
+  }
+
+  toast(t('toast_irav_fetching'));
+  try{
+    const irav = await fetchLatestIrav();
+    const label = monthLabel(irav.year, irav.monthIndex0);
+    const text = await buildIravEmail(irav.value, label);
+    showIravResult(text);
+  }catch(e){
+    console.log('[IRAV] fallo al consultar/procesar el INE:', e);
+    toast('IRAV: ' + (e && e.message ? e.message : 'error desconocido'), 4000);
+    document.getElementById('iravManualModalOverlay').classList.add('open');
+  }
+});
+
+document.getElementById('iravManualCancelBtn').addEventListener('click', ()=>{
+  document.getElementById('iravManualModalOverlay').classList.remove('open');
+});
+document.getElementById('iravManualContinueBtn').addEventListener('click', async ()=>{
+  const valueRaw = document.getElementById('iravManualValue').value.replace(',','.');
+  const monthRaw = document.getElementById('iravManualMonth').value;
+  const value = parseFloat(valueRaw);
+  if(isNaN(value) || !monthRaw){
+    toast(t('toast_irav_missing_fields'));
+    return;
+  }
+  const [y,m] = monthRaw.split('-').map(Number);
+  const label = monthLabel(y, m-1);
+  document.getElementById('iravManualModalOverlay').classList.remove('open');
+  const text = await buildIravEmail(value, label);
+  showIravResult(text);
+});
+
+document.getElementById('iravResultCloseBtn').addEventListener('click', ()=>{
+  document.getElementById('iravResultModalOverlay').classList.remove('open');
+});
+document.getElementById('iravResultCopyBtn').addEventListener('click', async ()=>{
+  const textarea = document.getElementById('iravResultText');
+  try{
+    await navigator.clipboard.writeText(textarea.value);
+    toast(t('toast_copied'));
+  }catch(e){
+    textarea.select();
+    document.execCommand('copy');
+    toast(t('toast_copied'));
+  }
+});
+
 async function getExifTimestamp(file){
   try{
     const data = await exifr.parse(file, { pick:['DateTimeOriginal','CreateDate','ModifyDate'] });
@@ -1799,10 +2077,22 @@ document.getElementById('landingLegalBtn').addEventListener('click', ()=>{
   document.getElementById('backToLandingBtn').style.display = 'inline-block';
   window.scrollTo(0,0);
 });
+document.getElementById('landingIravBtn').addEventListener('click', ()=>{
+  document.getElementById('landingScreen').style.display = 'none';
+  document.getElementById('iravScreen').style.display = 'block';
+  document.getElementById('stepIndicator').style.display = 'block';
+  document.getElementById('stepIndicatorText').innerHTML = '';
+  document.getElementById('backToLandingBtn').style.display = 'inline-block';
+  const now = new Date();
+  const currentYm = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  document.getElementById('iravEffectiveDate').min = currentYm;
+  window.scrollTo(0,0);
+});
 document.getElementById('backToLandingBtn').addEventListener('click', ()=>{
   document.getElementById('stepFill').style.display = 'none';
   document.getElementById('stepReview').style.display = 'none';
   document.getElementById('legalScreen').style.display = 'none';
+  document.getElementById('iravScreen').style.display = 'none';
   document.getElementById('footerFill').style.display = 'none';
   document.getElementById('footerReview').style.display = 'none';
   document.getElementById('stepIndicator').style.display = 'none';
