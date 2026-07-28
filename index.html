@@ -346,7 +346,7 @@
   <div class="header-top-row">
     <div>
       <h1 data-i18n="app_title">Inventario del piso</h1>
-      <div class="subtitle" data-i18n="app_subtitle">Fotos por estancia + firmas de inquilinos + PDF resumen</div>
+      <div class="subtitle" id="appSubtitleText"></div>
     </div>
     <div class="lang-switch">
       <button id="langEs" class="active" type="button">ES</button>
@@ -371,17 +371,6 @@
       <div class="card-title" style="font-size:17px; margin-bottom:4px;" data-i18n="landing_title">¿Qué necesitas hacer?</div>
       <div class="hint" style="margin-bottom:18px;" data-i18n="landing_subtitle">Elige una opción para empezar.</div>
 
-      <div class="support-banner">
-        <span style="font-size:24px; flex-shrink:0;">🤍</span>
-        <div class="txt">
-          <b data-i18n="support_title">Esta herramienta es gratuita</b>
-          <span data-i18n="support_desc">La desarrollo y mantengo en mi tiempo libre. Si te gusta y quieres apoyar, una donación ayuda a que siga mejorando.</span>
-        </div>
-      </div>
-      <a href="https://www.paypal.com/donate/?hosted_button_id=5Q2BJ2WZLR36L" target="_blank" rel="noopener" class="pp-donate-btn big" id="landingDonateLink" style="margin-bottom:22px; justify-content:center; width:100%; box-sizing:border-box;">
-        <span class="pp-logo"><span class="pay">Pay</span><span class="pal">Pal</span></span> <span data-i18n="support_btn">Hacer una donación</span>
-      </a>
-
       <div style="border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:14px; text-align:left;">
         <div style="font-weight:600; font-size:14.5px; margin-bottom:4px;" data-i18n="landing_inventory_title">Hacer el inventario fotográfico</div>
         <div class="hint" style="margin-bottom:12px;" data-i18n="landing_inventory_desc">Fotos por estancia, comentarios, firma y PDF resumen.</div>
@@ -405,6 +394,17 @@
         <div class="hint" style="margin-bottom:12px;" data-i18n="landing_legal_desc">Acceso rápido a la LAU y otros temas puntuales. No es asesoramiento legal.</div>
         <button id="landingLegalBtn" class="btn secondary" style="width:100%;" data-i18n="landing_legal_btn">Ver enlaces →</button>
       </div>
+
+      <div class="support-banner" style="margin-top:22px;">
+        <span style="font-size:24px; flex-shrink:0;">🤍</span>
+        <div class="txt">
+          <b data-i18n="support_title">Esta herramienta es gratuita</b>
+          <span data-i18n="support_desc">La desarrollo y mantengo en mi tiempo libre. Si te gusta y quieres apoyar, una donación ayuda a que siga mejorando.</span>
+        </div>
+      </div>
+      <a href="https://www.paypal.com/donate/?hosted_button_id=5Q2BJ2WZLR36L" target="_blank" rel="noopener" class="pp-donate-btn big" id="landingDonateLink" style="justify-content:center; width:100%; box-sizing:border-box;">
+        <span class="pp-logo"><span class="pay">Pay</span><span class="pal">Pal</span></span> <span data-i18n="support_btn">Hacer una donación</span>
+      </a>
     </section>
   </div>
 
@@ -611,7 +611,7 @@
 // ================= I18N =================
 const I18N = {
   es: {
-    app_title:'Inventario del piso',
+    app_title:'Domus Kit',
     app_subtitle:'Fotos por estancia + firmas de inquilinos + PDF resumen',
     step1_bold:'Paso 1 de 2', step1_rest:' · Rellenar datos y fotos',
     step2_bold:'Paso 2 de 2', step2_rest:' · Revisar y firmar',
@@ -752,7 +752,7 @@ const I18N = {
     pdf_pending_signature:'(Pendiente de firma)'
   },
   en: {
-    app_title:'Property inventory',
+    app_title:'Domus Kit',
     app_subtitle:'Room-by-room photos + tenant signatures + PDF summary',
     step1_bold:'Step 1 of 2', step1_rest:' · Fill in details and photos',
     step2_bold:'Step 2 of 2', step2_rest:' · Review and sign',
@@ -914,6 +914,21 @@ function applyStaticTranslations(){
     if(I18N[lang][key] !== undefined) el.placeholder = I18N[lang][key];
   });
   document.documentElement.lang = lang;
+  updateHeaderSubtitle();
+}
+
+function updateHeaderSubtitle(){
+  const el = document.getElementById('appSubtitleText');
+  if(!el) return;
+  if(document.getElementById('stepFill').style.display === 'block' || document.getElementById('stepReview').style.display === 'block'){
+    el.textContent = t('landing_inventory_title');
+  } else if(document.getElementById('legalScreen').style.display === 'block'){
+    el.textContent = t('legal_modal_title');
+  } else if(document.getElementById('iravScreen').style.display === 'block'){
+    el.textContent = t('landing_irav_title');
+  } else {
+    el.textContent = '';
+  }
 }
 
 function setLang(newLang){
@@ -1082,6 +1097,7 @@ async function restoreState(state){
   } else {
     document.getElementById('landingScreen').style.display = 'block';
   }
+  updateHeaderSubtitle();
 }
 
 function seedDefaults(){
@@ -1807,6 +1823,7 @@ function goToReview(){
   prebuildZip();
   window.scrollTo(0,0);
   scheduleAutosave();
+  updateHeaderSubtitle();
 }
 function goToFill(){
   document.getElementById('stepFill').style.display = 'block';
@@ -1816,6 +1833,7 @@ function goToFill(){
   document.getElementById('stepIndicatorText').innerHTML = '';
   window.scrollTo(0,0);
   scheduleAutosave();
+  updateHeaderSubtitle();
 }
 
 // ================= helpers =================
@@ -2068,6 +2086,7 @@ document.getElementById('landingInventoryBtn').addEventListener('click', ()=>{
   document.getElementById('footerFill').style.display = 'flex';
   window.scrollTo(0,0);
   scheduleAutosave();
+  updateHeaderSubtitle();
 });
 document.getElementById('landingLegalBtn').addEventListener('click', ()=>{
   document.getElementById('landingScreen').style.display = 'none';
@@ -2076,6 +2095,7 @@ document.getElementById('landingLegalBtn').addEventListener('click', ()=>{
   document.getElementById('stepIndicatorText').innerHTML = '';
   document.getElementById('backToLandingBtn').style.display = 'inline-block';
   window.scrollTo(0,0);
+  updateHeaderSubtitle();
 });
 document.getElementById('landingIravBtn').addEventListener('click', ()=>{
   document.getElementById('landingScreen').style.display = 'none';
@@ -2087,6 +2107,7 @@ document.getElementById('landingIravBtn').addEventListener('click', ()=>{
   const currentYm = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
   document.getElementById('iravEffectiveDate').min = currentYm;
   window.scrollTo(0,0);
+  updateHeaderSubtitle();
 });
 document.getElementById('backToLandingBtn').addEventListener('click', ()=>{
   document.getElementById('stepFill').style.display = 'none';
@@ -2100,6 +2121,7 @@ document.getElementById('backToLandingBtn').addEventListener('click', ()=>{
   document.getElementById('landingScreen').style.display = 'block';
   window.scrollTo(0,0);
   scheduleAutosave();
+  updateHeaderSubtitle();
 });
 
 document.getElementById('addRoomBtn').addEventListener('click', ()=> addRoom());
