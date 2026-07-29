@@ -432,9 +432,16 @@
   </div>
 
   <div id="iravScreen" style="display:none;">
+
     <section class="card">
-      <div class="card-head"><span class="card-title" data-i18n="irav_sec_title">Aviso de subida de renta (IRAV)</span></div>
-      <div class="hint" style="margin-bottom:14px;" data-i18n="irav_sec_desc">Genera el texto de un email con la nueva renta calculada según el último dato del IRAV publicado por el INE.</div>
+      <div class="card-head"><span class="card-title" data-i18n="rentupdate_ipc_title">Actualización con IPC</span></div>
+      <div class="hint" style="margin-bottom:14px;" data-i18n="rentupdate_ipc_desc">Aplicable a contratos firmados antes del 26 de mayo de 2023. El cálculo se hace directamente en la herramienta oficial del INE.</div>
+      <a href="https://www.ine.es/dyngs/IPC/es/index.htm?cid=1436" target="_blank" rel="noopener" class="btn secondary" style="width:100%; text-decoration:none; display:flex; align-items:center; justify-content:center;" data-i18n="rentupdate_ipc_btn">Ir a la herramienta del INE (IPC)</a>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><span class="card-title" data-i18n="rentupdate_irav_title">Actualización con IRAV</span></div>
+      <div class="hint" style="margin-bottom:14px;" data-i18n="rentupdate_irav_desc">Aplicable a contratos firmados a partir del 26 de mayo de 2023. Genera el texto de un email con la nueva renta calculada según el último dato del IRAV publicado por el INE.</div>
 
       <label class="field"><span data-i18n="irav_label_tenant">Nombre del inquilino</span>
         <input type="text" id="iravTenantName" data-i18n-ph="ph_fullname" placeholder="Nombre y apellidos">
@@ -446,7 +453,7 @@
         <label class="field"><span data-i18n="irav_label_rent">Renta actual (€/mes)</span>
           <input type="text" inputmode="decimal" id="iravCurrentRent" placeholder="850">
         </label>
-        <label class="field"><span data-i18n="irav_label_effective">Aplicable desde</span>
+        <label class="field"><span data-i18n="irav_label_effective">Nueva renta aplicable desde</span>
           <input type="month" id="iravEffectiveDate">
         </label>
       </div>
@@ -688,9 +695,9 @@ const I18N = {
     landing_subtitle:'Elige una opción para empezar.',
     landing_contract_title:'Obtener un contrato de alquiler',
     landing_contract_desc:'Modelos gratuitos de Idealista (PDF/Word) para vivienda, temporal, habitaciones, etc.',
-    landing_irav_title:'Aviso de subida de renta (IRAV)',
-    landing_irav_desc:'Calcula la nueva renta y genera el texto del email, usando el último dato oficial del INE.',
-    landing_irav_btn:'Generar aviso',
+    landing_irav_title:'Actualización de renta',
+    landing_irav_desc:'Actualiza la renta con IPC o IRAV según la fecha de tu contrato.',
+    landing_irav_btn:'Actualizar',
     landing_legal_title:'Normativa de alquiler',
     landing_legal_desc:'Acceso rápido a la LAU y otros temas puntuales. No es asesoramiento legal.',
     landing_legal_btn:'Acceder',
@@ -699,9 +706,14 @@ const I18N = {
     legal_link_lau:'Ley de Arrendamientos Urbanos (texto completo)',
     legal_link_lau_desc:'Texto consolidado oficial en el BOE.',
     legal_link_irav:'Índice de Referencia de Arrendamiento (IRAV)',
-    legal_link_irav_desc:'Dato oficial del INE para actualizar la renta en contratos posteriores a mayo de 2023.',
-    irav_sec_title:'Aviso de subida de renta (IRAV)',
-    irav_sec_desc:'Genera el texto de un email con la nueva renta calculada según el último dato del IRAV publicado por el INE.',
+    legal_link_irav_desc:'Dato oficial del INE para actualizar la renta en contratos firmados con posterioridad al 26 de mayo de 2023.',
+    legal_link_ipc:'Actualización de renta con el IPC',
+    legal_link_ipc_desc:'Herramienta oficial del INE. Aplicable a contratos firmados hasta el 26 de mayo de 2023.',
+    rentupdate_ipc_title:'Actualización con IPC',
+    rentupdate_ipc_desc:'Aplicable a contratos de alquiler firmados hasta el 26 de mayo de 2023. El cálculo se hace directamente en la herramienta oficial del INE.',
+    rentupdate_ipc_btn:'Ir a la herramienta del INE (IPC)',
+    rentupdate_irav_title:'Actualización con IRAV',
+    rentupdate_irav_desc:'Los contratos de alquiler firmados con posterioridad al 26 de mayo de 2023 se revisarán en base al IRAV. Genera el texto de un email con la nueva renta calculada según el último dato publicado por el INE.',
     irav_label_tenant:'Nombre del inquilino',
     irav_label_rent:'Renta actual (€/mes)',
     irav_label_effective:'Nueva renta aplicable desde',
@@ -829,9 +841,9 @@ const I18N = {
     landing_subtitle:'Choose an option to get started.',
     landing_contract_title:'Get a rental contract',
     landing_contract_desc:'Free templates from Idealista (PDF/Word) for standard, short-term, room rental, etc. (Spanish site)',
-    landing_irav_title:'Rent increase notice (IRAV)',
-    landing_irav_desc:'Calculates the new rent and generates the email text, using the latest official INE figure.',
-    landing_irav_btn:'Generate notice',
+    landing_irav_title:'Rent update',
+    landing_irav_desc:'Update the rent with CPI (IPC) or IRAV depending on your contract date.',
+    landing_irav_btn:'Update',
     landing_legal_title:'Rental regulations',
     landing_legal_desc:'Quick access to the LAU and other specific topics. Not legal advice.',
     landing_legal_btn:'View links',
@@ -840,9 +852,14 @@ const I18N = {
     legal_link_lau:'Ley de Arrendamientos Urbanos (full text)',
     legal_link_lau_desc:'Official consolidated text (Spanish BOE).',
     legal_link_irav:'Rent Reference Index (IRAV)',
-    legal_link_irav_desc:'Official INE figure for updating rent on contracts signed after May 2023.',
-    irav_sec_title:'Rent increase notice (IRAV)',
-    irav_sec_desc:'Generates an email with the new rent, calculated using the latest IRAV figure published by the INE.',
+    legal_link_irav_desc:'Official INE figure for updating rent on contracts signed after 26 May 2023.',
+    legal_link_ipc:'Rent update with the CPI (IPC)',
+    legal_link_ipc_desc:'Official INE tool. Applicable to contracts signed up to and including 26 May 2023.',
+    rentupdate_ipc_title:'CPI (IPC) update',
+    rentupdate_ipc_desc:'Applicable to rental contracts signed up to and including 26 May 2023. The calculation is done directly on the official INE tool.',
+    rentupdate_ipc_btn:'Go to the INE tool (IPC)',
+    rentupdate_irav_title:'IRAV update',
+    rentupdate_irav_desc:'Rental contracts signed after 26 May 2023 are reviewed using the IRAV. Generates an email with the new rent, calculated using the latest figure published by the INE.',
     irav_label_tenant:'Tenant name',
     irav_label_rent:'Current rent (€/month)',
     irav_label_effective:'New rent applies from',
