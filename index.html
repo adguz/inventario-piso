@@ -611,8 +611,8 @@
 // ================= I18N =================
 const I18N = {
   es: {
-    app_title:'Domus Kit',
-    app_subtitle:'Fotos por estancia + firmas de inquilinos + PDF resumen',
+    app_title:'Pisacho',
+    app_tagline:'Herramientas de alquiler',
     step1_bold:'Paso 1 de 2', step1_rest:' · Rellenar datos y fotos',
     step2_bold:'Paso 2 de 2', step2_rest:' · Revisar y firmar',
     sec_property:'01 · Datos del inmueble',
@@ -752,8 +752,8 @@ const I18N = {
     pdf_pending_signature:'(Pendiente de firma)'
   },
   en: {
-    app_title:'Domus Kit',
-    app_subtitle:'Room-by-room photos + tenant signatures + PDF summary',
+    app_title:'Pisacho',
+    app_tagline:'Rental tools',
     step1_bold:'Step 1 of 2', step1_rest:' · Fill in details and photos',
     step2_bold:'Step 2 of 2', step2_rest:' · Review and sign',
     sec_property:'01 · Property details',
@@ -927,7 +927,7 @@ function updateHeaderSubtitle(){
   } else if(document.getElementById('iravScreen').style.display === 'block'){
     el.textContent = t('landing_irav_title');
   } else {
-    el.textContent = '';
+    el.textContent = t('app_tagline');
   }
 }
 
