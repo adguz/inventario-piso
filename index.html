@@ -657,6 +657,7 @@ const I18N = {
     stamp_photos_n:(n)=> n + (n===1 ? ' FOTO' : ' FOTOS'),
     stamp_none:'SIN FOTOS',
     btn_add_photo:'📷 Añadir fotos',
+    btn_upload_photo:'🖼️ Cargar fotos',
     ph_caption:'Comentario (ej. mancha en pared)',
     title_remove_room:'Eliminar estancia',
     title_drag_room:'Mantén pulsado y arrastra para reordenar',
@@ -803,6 +804,7 @@ const I18N = {
     stamp_photos_n:(n)=> n + (n===1 ? ' PHOTO' : ' PHOTOS'),
     stamp_none:'NO PHOTOS',
     btn_add_photo:'📷 Add photos',
+    btn_upload_photo:'🖼️ Upload photos',
     ph_caption:'Comment (e.g. stain on wall)',
     title_remove_room:'Remove room',
     title_drag_room:'Hold and drag to reorder',
@@ -1193,8 +1195,12 @@ function renderRooms(){
       </div>
       <div class="room-body">
         <div class="photo-grid" id="grid-${room.id}"></div>
-        <button class="add-photo-btn" data-addphoto="${room.id}">${t('btn_add_photo')}</button>
+        <div class="row2">
+          <button class="add-photo-btn" data-addphoto="${room.id}">${t('btn_add_photo')}</button>
+          <button class="add-photo-btn" data-uploadphoto="${room.id}">${t('btn_upload_photo')}</button>
+        </div>
         <input type="file" accept="image/*" capture="environment" multiple id="file-${room.id}">
+        <input type="file" accept="image/*" multiple id="upload-${room.id}">
       </div>
     `;
     list.appendChild(el);
@@ -1237,9 +1243,14 @@ function renderRooms(){
       document.getElementById('file-'+e.target.dataset.addphoto).click();
     });
   });
+  list.querySelectorAll('[data-uploadphoto]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      document.getElementById('upload-'+e.target.dataset.uploadphoto).click();
+    });
+  });
   list.querySelectorAll('input[type=file]').forEach(inp=>{
     inp.addEventListener('change', async e=>{
-      const roomId = e.target.id.replace('file-','');
+      const roomId = e.target.id.replace('file-','').replace('upload-','');
       const room = rooms.find(x=>x.id == roomId);
       for(const file of e.target.files){
         const img = await fileToDataUrl(file);
