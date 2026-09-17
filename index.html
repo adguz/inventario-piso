@@ -2266,7 +2266,7 @@ async function buildPdf(){
     let col = 0;
 
     for(const photo of room.photos){
-      if(ry + cellH + capH > 285){ doc.addPage(); ry = margin; col = 0; }
+      if(ry + cellH + capH > 262){ doc.addPage(); ry = margin; col = 0; }
       const x = margin + col * (cellW + gap);
 
       let drawW = cellW, drawH = cellH;
@@ -2292,6 +2292,46 @@ async function buildPdf(){
       }
       col++;
       if(col >= cols){ col = 0; ry += cellH + capH + (photo.caption ? 4 : 0) + gap; }
+    }
+  }
+
+  // Firma(s) del/de los inquilino(s) en el pie de todas las páginas, no solo en la primera
+  const tenantsWithData = tenants.filter(tn => tn.name || tn.canvasEl);
+  if(tenantsWithData.length){
+    const totalPages = doc.internal.getNumberOfPages();
+    const sepY = 268;
+    const infoLineY = 272;
+    const footerY = 277;
+    const sigW = 28, sigH = 10, colGap = 8;
+    for(let p = 1; p <= totalPages; p++){
+      doc.setPage(p);
+      doc.setDrawColor(214,217,206); doc.setLineWidth(0.3);
+      doc.line(margin, sepY, pageW - margin, sepY);
+
+      doc.setFont('helvetica','normal'); doc.setFontSize(7);
+      doc.setTextColor(110,110,110);
+      doc.text(t('pdf_address') + ': ' + address + '   ·   ' + t('pdf_date') + ': ' + date, margin, infoLineY);
+
+      let sx = margin;
+      tenantsWithData.forEach(tn=>{
+        doc.setFont('helvetica','normal'); doc.setFontSize(7);
+        doc.setTextColor(110,110,110);
+        const label = t('pdf_tenant') + ': ' + (tn.name || t('pdf_no_name'));
+        doc.text(label, sx, footerY);
+        if(tn.canvasEl && !tn.sigEmpty){
+          const sigData = tn.canvasEl.toDataURL('image/png');
+          try{ doc.addImage(sigData, 'PNG', sx, footerY + 1.5, sigW, sigH); }catch(e){ /* ignorar si falla */ }
+        } else {
+          doc.setFont('helvetica','italic'); doc.setFontSize(7);
+          doc.text(t('pdf_pending_signature'), sx, footerY + 6);
+        }
+        sx += sigW + colGap;
+      });
+
+      doc.setFont('helvetica','normal'); doc.setFontSize(7);
+      doc.setTextColor(110,110,110);
+      doc.text(String(p) + ' / ' + totalPages, pageW - margin, footerY, { align:'right' });
+      doc.setTextColor(0,0,0);
     }
   }
 
